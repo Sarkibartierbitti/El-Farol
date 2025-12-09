@@ -22,19 +22,15 @@ export class SeededRandom {
     return typeof this.rng === "function" ? (this.rng as () => number)() : Math.random();
   }
 
-  randomInt(min: number, max: number): number {
+  randInt(min: number, max: number): number {
     return Math.floor(this.random() * (max - min)) + min;
   }
 
-  randomIntInclusive(min: number, max: number): number {
-    return Math.floor(this.random() * (max - min + 1)) + min;
-  }
-
-  randomBoolean(): boolean {
+  randBool(): boolean {
     return this.random() >= 0.5;
   }
 
-  randomFloat(min: number, max: number): number {
+  randFloat(min: number, max: number): number {
     return this.random() * (max - min) + min;
   }
 
@@ -50,8 +46,10 @@ export class SeededRandom {
   }
 
   choice<T>(array: T[]): T | undefined {
-    if (array.length === 0) return undefined;
-    return array[this.randomInt(0, array.length)];
+    if (array.length === 0) {
+      return undefined;
+    }
+    return array[this.randInt(0, array.length)];
   }
 
   sample<T>(array: T[], count: number): T[] {
