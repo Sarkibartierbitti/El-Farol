@@ -1,0 +1,25 @@
+{
+  "name": "@el-farol/shared",
+  "version": "0.1.0",
+  "description": "Shared types and utilities for El Farol Bar Problem simulation",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "el-farol",
+    "game-theory",
+    "simulation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "seedrandom": "^3.0.5"
+  },
+  "devDependencies": {
+    "@types/seedrandom": "^3.0.6"
+  }
+}
+
