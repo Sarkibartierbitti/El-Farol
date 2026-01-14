@@ -7,11 +7,14 @@ import {
 import { Game } from './models/Game';
 import { BaseAgent } from './models/Agent';
 import { v4 as uuidv4 } from 'uuid';
+import { calculateStats } from './stats';
 
 export { Game } from './models/Game';
 export { BaseAgent, RandomAgent, ThresholdAgent, MovingAverageAgent, AdaptiveAgent, HumanAgent, CustomAgent } from './models/Agent';
 export { AgentFactory } from './models/AgentFactory';
 export { AgentSandbox } from './sandbox';
+export { calculateStats } from './stats';
+export type { StatsInput } from './stats';
 export type { ValidationResult } from './sandbox';
 
 //engine to run simulations
@@ -138,70 +141,13 @@ export class SimulationEngine {
   }
 
   calculateGameStats(game: Game): GameStats {
-    const attendanceHistory = game.getAttendanceHistory();
-    const benefitHistory = game.getBenefitHistory();
-    const totalRounds = attendanceHistory.length;
-
-    if (totalRounds === 0) {
-      return {
-        gameId: game.getId(),
-        totalRounds: 0,
-        totalBenefit: 0,
-        averageBenefit: 0,
-        averageAttendance: 0,
-        attendanceVariance: 0,
-        attendanceStdDev: 0,
-        optimalBenefit: 0,
-        efficiency: 0,
-        attendanceHistory: [],
-        benefitHistory: [],
-        roundsWithinCapacity: 0,
-        roundsOverCapacity: 0
-      };
-    }
-
-    const totalBenefit = benefitHistory.reduce((sum, val) => sum + val, 0);
-    const averageBenefit = totalBenefit / totalRounds;
-    const averageAttendance = attendanceHistory.reduce((sum, val) => sum + val, 0) / totalRounds;
-
-    // Calculate variance
-    const variance = attendanceHistory.reduce((sum, val) => {
-      const diff = val - averageAttendance;
-      return sum + diff * diff;
-    }, 0) / totalRounds;
-    const stdDev = Math.sqrt(variance);
-
-    //max possible benefit
-    const capacity = game.getConfig().capacity;
-    const numAgents = game.getConfig().numAgents;
-    const optimalBenefit = capacity * totalRounds;
-
-    //min benefit
-    const minBenefit = -numAgents * totalRounds;
-
-    // efficiency: (actual - min) / (max - min)
-    const efficiency = optimalBenefit !== minBenefit
-      ? (totalBenefit - minBenefit) / (optimalBenefit - minBenefit)
-      : 0;
-
-    const roundsWithinCapacity = attendanceHistory.filter(a => a <= capacity).length;
-    const roundsOverCapacity = totalRounds - roundsWithinCapacity;
-
-    return {
+    return calculateStats({
       gameId: game.getId(),
-      totalRounds,
-      totalBenefit,
-      averageBenefit,
-      averageAttendance,
-      attendanceVariance: variance,
-      attendanceStdDev: stdDev,
-      optimalBenefit,
-      efficiency,
-      attendanceHistory: [...attendanceHistory],
-      benefitHistory: [...benefitHistory],
-      roundsWithinCapacity,
-      roundsOverCapacity
-    };
+      attendanceHistory: game.getAttendanceHistory(),
+      benefitHistory: game.getBenefitHistory(),
+      capacity: game.getConfig().capacity,
+      numAgents: game.getConfig().numAgents,
+    });
   }
 
 
