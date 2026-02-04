@@ -1,17 +1,23 @@
 FROM node:22-alpine AS base
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Fix DNS resolution issues in Docker build
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
+    corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
 
 # dependencies & configs=========================================
 FROM base AS deps
+
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
-
-
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/shared/package.json ./apps/shared/
-RUN pnpm install
+
+# Fix DNS resolution issues in Docker build and install deps
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
+    pnpm install
 
 # build===================================================
 FROM base AS builder
@@ -69,7 +75,7 @@ ENV HOST=0.0.0.0
 
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health || exit 1
 
 # server launch
 CMD ["node", "lib/index.js"]

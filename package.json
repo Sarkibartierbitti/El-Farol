@@ -1,16 +1,15 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": [
-      "ES2023",
-      "DOM"
-    ],
-    "moduleResolution": "Node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+  "name": "el-farol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "El Farol Bar Problem simulation platform",
+  "type": "module",
+  "scripts": {
+    "dev:frontend": "pnpm --filter @el-farol/frontend dev",
+    "dev:backend": "pnpm --filter @el-farol/backend dev",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter @el-farol/frontend build",
+    "build:backend": "pnpm --filter @el-farol/backend build"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

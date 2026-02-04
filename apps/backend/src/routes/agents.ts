@@ -165,7 +165,7 @@ agentsRouter.delete('/games/:gameId/agents/:agentId', async (c: Context) => {
     if (error instanceof Error) {
       throw new HTTPException(400, { message: error.message });
     }
-    throw new HTTPException(500, { message: 'Failed to remove agent:' + error.message});
+    throw new HTTPException(500, { message: 'Failed to remove agent: ' + String(error) });
   }
 });
 
@@ -226,7 +226,7 @@ agentsRouter.get('/games/:gameId/agents/:agentId', async (c: Context) => {
   } catch (error) {
     if (error instanceof HTTPException) throw error;
     console.error('Error getting agent:', error);
-    throw new HTTPException(500, { message: 'Failed to get agent:' + error.message});
+    throw new HTTPException(500, { message: 'Failed to get agent: ' + String(error) });
   }
 });
 

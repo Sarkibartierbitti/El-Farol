@@ -98,7 +98,7 @@ roundsRouter.get('/:id', async (c: Context) => {
   } catch (error) {
     if (error instanceof HTTPException) throw error;
     console.error('Error getting round:', error);
-    throw new HTTPException(500, { message: 'Failed to get round:' + error.message });
+    throw new HTTPException(500, { message: 'Failed to get round: ' + String(error) });
   }
 });
 
@@ -144,7 +144,7 @@ roundsRouter.get('/games/:gameId/rounds', async (c: Context) => {
   } catch (error) {
     if (error instanceof HTTPException) throw error;
     console.error('Error listing game rounds:', error);
-    throw new HTTPException(500, { message: 'Failed to list game rounds:' + error.message });
+    throw new HTTPException(500, { message: 'Failed to list game rounds: ' + String(error) });
   }
 });
 

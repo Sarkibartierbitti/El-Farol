@@ -201,7 +201,7 @@ analyticsRouter.get('/games/:gameId/agents/performance', async (c: Context) => {
   } catch (error) {
     if (error instanceof HTTPException) throw error;
     console.error('Error getting agent performance:', error);
-    throw new HTTPException(500, { message: 'Failed to get agent performance:' + error.message });
+    throw new HTTPException(500, { message: 'Failed to get agent performance: ' + String(error) });
   }
 });
 

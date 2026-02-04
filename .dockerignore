@@ -1,0 +1,53 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Docker build artifacts (hex layer IDs)
+docker/[0-9a-f][0-9a-f][0-9a-f]*
+docker/Removed
+docker/Running
+docker/Using
+docker/tsc
+docker/prisma
+
+# Build outputs
+dist
+**/dist
+lib
+**/lib
+
+# Compiled TypeScript files in source directories
+apps/frontend/src/**/*.js
+apps/frontend/src/**/*.js.map
+apps/frontend/src/**/*.d.ts
+apps/frontend/src/**/*.d.ts.map
+apps/frontend/*.js
+apps/frontend/*.js.map
+apps/frontend/*.d.ts
+apps/frontend/*.d.ts.map
+!apps/frontend/tailwind.config.js
+!apps/frontend/postcss.config.js
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage
+
+# Cursor
+.cursor

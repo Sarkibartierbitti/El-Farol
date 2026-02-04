@@ -58,89 +58,180 @@ Overview:
 El-Farol/
 │
 ├── package.json                 # root config (workspaces)
-├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml          # pnpm workspace config
+├── tsconfig.json
+├── .dockerignore                # Docker build exclusions
 ├── README.md
 │
 ├── apps/
-│   ├── backend/                 # Node.js Fastify / Express backend
+│   ├── backend/                 # Node.js hono backend
 │   │   ├── package.json
-│   │   ├── src/
-│   │   │   ├── index.ts         # app entrypoint
-│   │   │   ├── server.ts        # Fastify app + routes registration
-│   │   │   ├── routes/
-│   │   │   │   ├── games.ts
-│   │   │   │   ├── agents.ts
-│   │   │   │   ├── rounds.ts
-│   │   │   │   └── analytics.ts
-│   │   │   ├── services/
-│   │   │   │   ├── simulation.service.ts
-│   │   │   │   ├── analytics.service.ts
-│   │   │   │   └── telegram.service.ts
-│   │   │   ├── core/
-│   │   │   │   ├── simulation-engine/
-│   │   │   │   │   ├── index.ts
-│   │   │   │   │   ├── models/
-│   │   │   │   │   │   ├── Agent.ts
-│   │   │   │   │   │   └── Game.ts
-│   │   │   │   │   └── sandbox.ts   # vm2 isolated execution
-│   │   │   ├── db/
-│   │   │   │   ├── index.ts         # db client (pg / Prisma)
-│   │   │   │   ├── migrations/
-│   │   │   │   └── seed.ts
-│   │   │   └── utils/
-│   │   │       ├── logger.ts
-│   │   │       └── config.ts
-│   │   └── .env.example
+│   │   ├── env.example
+│   │   ├── prisma/
+│   │   │   └── schema.prisma    # Prisma schema definition
+│   │   └── src/
+│   │       ├── index.ts         # app entrypoint
+│   │       ├── server.ts        # hono app + routes registration
+│   │       ├── routes/
+│   │       │   ├── games.ts
+│   │       │   ├── agents.ts
+│   │       │   ├── rounds.ts
+│   │       │   └── analytics.ts
+│   │       ├── services/
+│   │       │   ├── simulation_service.ts
+│   │       │   ├── analytics_service.ts
+│   │       │   └── telegram_service.ts
+│   │       └── core/
+│   │           ├── db/
+│   │           │   ├── index.ts
+│   │           │   ├── prisma.ts
+│   │           │   ├── seed.ts
+│   │           │   └── repositories/
+│   │           │       ├── GameRepository.ts
+│   │           │       └── RoundRepository.ts
+│   │           └── simulation-engine/
+│   │               ├── index.ts
+│   │               ├── sandbox.ts
+│   │               ├── stats.ts
+│   │               └── models/
+│   │                   ├── Agent.ts
+│   │                   ├── AgentFactory.ts
+│   │                   └── Game.ts
 │   │
 │   ├── bot/                      # Telegram bot service
 │   │   ├── package.json
-│   │   ├── src/
-│   │   │   ├── index.ts          # bot entrypoint
-│   │   │   ├── handlers/
-│   │   │   │   ├── start.ts
-│   │   │   │   ├── decisions.ts
-│   │   │   │   ├── results.ts
-│   │   │   │   └── schedule.ts
-│   │   │   ├── middlewares/
-│   │   │   └── utils/
-│   │   │       ├── apiClient.ts  # communicates with backend
-│   │   │       └── keyboards.ts
-│   │   └── .env.example
+│   │   ├── env.example
+│   │   └── src/
+│   │       ├── index.ts          # bot entrypoint
+│   │       ├── handlers/
+│   │       │   ├── starts.ts
+│   │       │   ├── decisions.ts
+│   │       │   ├── results.ts
+│   │       │   └── schedules.ts
+│   │       └── utils/
+│   │           ├── api_clients.ts
+│   │           └── keyboards.ts
 │   │
-│   ├── frontend/                 # React Mini App (Telegram WebApp)
+│   ├── frontend/                 # React + Vite + Tailwind Mini App
 │   │   ├── package.json
-│   │   ├── src/
-│   │   │   ├── main.tsx
-│   │   │   ├── App.tsx
-│   │   │   ├── components/
-│   │   │   │   ├── GameConfigForm.tsx
-│   │   │   │   ├── SimulationViz.tsx
-│   │   │   │   ├── AgentEditor.tsx   # Monaco Editor
-│   │   │   │   ├── RoundStats.tsx
-│   │   │   └── api/
-│   │   │       ├── client.ts
-│   │   │       ├── games.ts
-│   │   │       └── analytics.ts
-│   │   ├── public/
-│   │   └── vite.config.ts
+│   │   ├── index.html            # HTML entry point
+│   │   ├── vite.config.ts        # Vite config with API proxy
+│   │   ├── tsconfig.json         # TypeScript config
+│   │   ├── tailwind.config.js    # Tailwind CSS config
+│   │   ├── postcss.config.js     # PostCSS config
+│   │   └── src/
+│   │       ├── index.css         # Tailwind directives + utilities
+│   │       ├── main.tsx          # React entry point
+│   │       ├── app.tsx           # Main App component
+│   │       ├── components/
+│   │       │   ├── gameconfig_form.tsx
+│   │       │   ├── simulation_viz.tsx
+│   │       │   ├── agent_editor.tsx
+│   │       │   └── round_stats.tsx
+│   │       └── api/
+│   │           ├── client.ts
+│   │           ├── games.ts
+│   │           └── analytics.ts
 │   │
-│   └── shared/                   # Optional shared lib (types & utils)
+│   └── shared/                   # Shared lib (types & utils)
 │       ├── package.json
-│       ├── src/
-│       │   ├── types/
-│       │   │   ├── game.ts
-│       │   │   ├── agent.ts
-│       │   │   └── round.ts
-│       │   └── utils/
-│       │       └── random.ts
-│       └── index.ts
+│       ├── index.ts
+│       └── src/
+│           ├── types/
+│           │   ├── game.ts
+│           │   ├── agent.ts
+│           │   └── round.ts
+│           └── utils/
+│               └── random.ts
 │
 └── docker/
-    ├── docker-compose.yml
-    ├── backend.Dockerfile
-    ├── bot.Dockerfile
-    ├── frontend.Dockerfile
+    ├── docker-compose.yaml       # All services orchestration
+    ├── backend_dockerfile        # Multi-stage Node.js build
+    ├── bot_dockerfile
+    ├── frontend_dockerfile       # Multi-stage Vite build + nginx
+    ├── nginx.conf                # SPA fallback + API proxy
+    ├── env.example
     └── init.sql
+
+Docker Commands:
+
+# Setup
+cd docker
+cp env.example .env          
+
+build/logs/stop
+docker-compose up -d
+
+
+docker-compose logs -f           # All services
+docker-compose logs -f backend   # Backend only
+docker-compose logs -f frontend  # Frontend only
+docker-compose logs -f postgres  # Database only
+
+docker-compose down
+
+rebuild/restart/check status
+docker-compose up -d --build
+
+docker-compose build --no-cache && docker-compose up -d
+
+docker-compose down -v && docker-compose up -d --build
+
+
+docker-compose ps
+
+# Db access
+docker exec -it el_farol_postgres psql -U elfarol -d elfarol
+
+
+PostgreSQL  5432          5434        localhost:5434        
+Backend     3000          3001     http://localhost:3001  
+Frontend    80 (nginx)    3002     http://localhost:3002  
+
+Frontend nginx proxies /api/* requests to the backend container.
+Frontend Commands (Local Development):
+
+# install dependencies and frontend stuff
+pnpm install
+
+
+pnpm dev:frontend
+
+cd apps/frontend && pnpm dev
+
+
+pnpm build:frontend
+
+
+cd apps/frontend && pnpm preview
+
+cd apps/frontend && pnpm type-check
+
+##########################################################################################################################################################
+Access Points Summary:
+
+Environment Frontend Backend API  Notes                              
+
+ Local Dev    http://localhost:5173  http://localhost:3001  Vite proxies /api to backend       
+ Docker       http://localhost:3002  http://localhost:3001  nginx proxies /api to backend      
+
+
+
+Frontend:
+- React 18 + TypeScript
+- Vite 6 (with SWC)
+- Tailwind CSS 3
+- nginx (production)
+
+Backend:
+- Node.js 22 + Hono
+- Prisma ORM
+- PostgreSQL 16
+
+Build Tools:
+- pnpm workspaces
+- Docker multi-stage builds
 
 
 

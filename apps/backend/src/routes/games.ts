@@ -316,7 +316,7 @@ gamesRouter.patch('/:id/status', async (c: Context) => {
     if (error instanceof Error) {
       throw new HTTPException(400, { message: error.message });
     }
-    throw new HTTPException(500, { message: 'Failed to update game status:' + error.message });
+    throw new HTTPException(500, { message: 'Failed to update game status: ' + String(error) });
   }
 });
 
@@ -376,7 +376,7 @@ gamesRouter.post('/:id/rounds', async (c: Context) => {
     if (error instanceof Error) {
       throw new HTTPException(400, { message: error.message });
     }
-    throw new HTTPException(500, { message: 'Failed to execute round: ' + error.message });
+    throw new HTTPException(500, { message: 'Failed to execute round: ' + String(error) });
   }
 });
 
@@ -440,7 +440,7 @@ gamesRouter.post('/:id/simulate', async (c: Context) => {
     if (error instanceof Error) {
       throw new HTTPException(400, { message: error.message });
     }
-    throw new HTTPException(500, { message: 'Failed to run simulation:' + error.message });
+    throw new HTTPException(500, { message: 'Failed to run simulation: ' + String(error) });
   }
 });
 
