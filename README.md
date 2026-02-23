@@ -208,6 +208,62 @@ cd apps/frontend && pnpm preview
 
 cd apps/frontend && pnpm type-check
 
+##############################################################
+Running the Simulation Engine (API, curl examples):
+
+The simulation engine runs inside the backend container. You drive it via the REST API.
+Replace localhost:3001 with localhost:3000 if running the backend locally (pnpm dev:backend).
+
+# 1. Create a game
+curl -X POST http://localhost:3001/games \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Saturday Night",
+    "config": {
+      "capacity": 60,
+      "numAgents": 100,
+      "numRounds": 50
+    }
+  }'
+# Response includes "id": "<GAME_ID>"  -- save it for the next steps.
+
+# 2. Add agents to the game (batch)
+#    builtInType options: "random", "threshold", "moving_average", "adaptive"
+curl -X POST http://localhost:3001/games/<GAME_ID>/agents/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agents": [
+      { "name": "Random 1",  "type": "built_in", "builtInType": "random" },
+      { "name": "Random 2",  "type": "built_in", "builtInType": "random" },
+      { "name": "Thresh 1",  "type": "built_in", "builtInType": "threshold",      "parameters": { "threshold": 0.6, "goProbability": 0.8 } },
+      { "name": "MA 1",      "type": "built_in", "builtInType": "moving_average", "parameters": { "windowSize": 5, "threshold": 0.6 } },
+      { "name": "Adaptive 1","type": "built_in", "builtInType": "adaptive",       "parameters": { "initialThreshold": 0.6, "adaptationRate": 0.1 } }
+    ]
+  }'
+
+# 3a. Run the entire simulation at once (all configured rounds)
+curl -X POST http://localhost:3001/games/<GAME_ID>/simulate \
+  -H "Content-Type: application/json" \
+  -d '{}'
+# Or run a specific number of rounds:  -d '{ "rounds": 20 }'
+
+# 3b. Or step through one round at a time
+#     First start the game:
+curl -X PATCH http://localhost:3001/games/<GAME_ID>/status \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "start" }'
+#     Then advance one round:
+curl -X POST http://localhost:3001/games/<GAME_ID>/rounds
+
+# 4. Inspect results
+curl http://localhost:3001/games/<GAME_ID>          # full game state
+curl http://localhost:3001/games/<GAME_ID>/stats     # aggregated statistics
+curl http://localhost:3001/rounds?gameId=<GAME_ID>   # round-by-round data
+
+# Other useful endpoints
+curl http://localhost:3001/games                     # list all games
+curl http://localhost:3001/health                    # backend health check
+
 ##########################################################################################################################################################
 Access Points Summary:
 
