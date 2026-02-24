@@ -1,0 +1,24 @@
+{
+  "name": "el-farol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "El Farol Bar Problem simulation platform",
+  "type": "module",
+  "scripts": {
+    "dev:frontend": "pnpm --filter @el-farol/frontend dev",
+    "dev:backend": "pnpm --filter @el-farol/backend dev",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter @el-farol/frontend build",
+    "build:backend": "pnpm --filter @el-farol/backend build"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "stream": "^0.0.3",
+    "uuid": "^13.0.0",
+    "vm2": "^3.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

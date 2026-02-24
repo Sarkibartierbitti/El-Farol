@@ -1,0 +1,11 @@
+#ignore trash files
+[0-9a-f][0-9a-f][0-9a-f]*
+
+Removed
+Running
+Using
+tsc
+prisma
+
+#no secret exposure
+.env
