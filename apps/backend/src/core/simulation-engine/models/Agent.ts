@@ -237,22 +237,34 @@ export class TrendFollowerAgent extends BaseAgent {
   }
 }
 
-// goes with a fixed probability
+// goes with a cycle
 export class LoyalAgent extends BaseAgent {
-  private readonly goProbability: number;
+  private readonly onRounds: number;
+  private readonly offRounds: number;
+  private roundCounter: number = 0;
 
   constructor(
     id: string,
-    name: string = 'Loyal Agent',
-    goProbability: number = 0.7,
+    name: string = 'Cycle Agent',
+    onRounds: number = 2,
+    offRounds: number = 1,
     random?: SeededRandom
   ) {
     super(id, name, AgentType.BUILT_IN, random);
-    this.goProbability = Math.max(0, Math.min(1, goProbability));
+    this.onRounds = Math.max(1, onRounds);
+    this.offRounds = Math.max(1, offRounds);
   }
 
   predict(_history: number[], _capacity: number): boolean {
-    return this.random.random() < this.goProbability;
+    const cycleLength = this.onRounds + this.offRounds;
+    const positionInCycle = this.roundCounter % cycleLength;
+    this.roundCounter++;
+
+    return positionInCycle < this.onRounds;
+  }
+
+  reset(): void {
+    this.roundCounter = 0;
   }
 }
 

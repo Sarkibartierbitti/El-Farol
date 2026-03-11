@@ -265,6 +265,20 @@ curl http://localhost:3001/games                     # list all games
 curl http://localhost:3001/health                    # backend health check
 
 ##########################################################################################################################################################
+Vercel Deployment:
+
+1. Set up a PostgreSQL database (e.g. Neon, Supabase, Vercel Postgres).
+2. Add DATABASE_URL in Vercel Project Settings → Environment Variables.
+3. Run migrations (once): from project root,
+   pnpm exec prisma migrate deploy --schema=apps/backend/prisma/schema.prisma
+   (use your prod DATABASE_URL)
+4. Deploy:
+   ./scripts/deploy.sh          # preview
+   ./scripts/deploy.sh --prod   # production
+
+The frontend is served from apps/frontend/dist; the API runs as Vercel serverless at /api/*.
+
+##########################################################################################################################################################
 Access Points Summary:
 
 Environment Frontend Backend API  Notes                              

@@ -124,7 +124,8 @@ export class AgentFactory {
         return new LoyalAgent(
           id,
           name,
-          (params.goProbability as number) ?? 0.7,
+          (params.onRounds as number) ?? 2,
+          (params.offRounds as number) ?? 1,
           rng
         );
 
