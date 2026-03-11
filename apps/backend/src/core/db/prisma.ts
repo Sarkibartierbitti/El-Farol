@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-// Vercel+Supabase integration provides POSTGRES_PRISMA_URL, not DATABASE_URL
-if (process.env.POSTGRES_PRISMA_URL && !process.env.DATABASE_URL) {
+// Prefer Supabase pooler (POSTGRES_PRISMA_URL) for serverless—direct connection (5432) often fails
+if (process.env.POSTGRES_PRISMA_URL) {
   process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL;
 }
 
