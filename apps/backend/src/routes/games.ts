@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { Context } from 'hono';
+import { SeededRandom } from '@el-farol/shared';
 import { HTTPException } from 'hono/http-exception';
 import { prisma } from '../core/db/prisma';
 import { GameStatus as PrismaGameStatus, Game as PrismaGame } from '@prisma/client';
@@ -9,7 +10,6 @@ import type { CreateGameRequest, AgentConfig } from '@el-farol/shared';
 
 const gamesRouter = new Hono();
 const simulationEngine = new SimulationEngine();
-const agentFactory = new AgentFactory();
 
 //game response type
 interface GameResponse {
@@ -19,7 +19,7 @@ interface GameResponse {
   status: GameStatus;
   config: GameConfig;
   currentRound: number;
-  agentCount: number;
+  agentCount: number; 
   totalBenefit: number;
   createdAt: Date;
   updatedAt: Date;
@@ -458,9 +458,11 @@ gamesRouter.post('/:id/agents/batch', async (c: Context) => {
       throw new HTTPException(404, { message: 'Game not found in simulation engine' });
     }
 
+
+    const agentFactory = new AgentFactory(undefined, undefined, id);
     const addedAgents = [];
-    for (const agentConfig of body.agents) {
-      const agent = agentFactory.createAgent(agentConfig);
+    for (let i = 0; i < body.agents.length; i++) {
+      const agent = agentFactory.createAgent(body.agents[i]!, undefined, i);
       simulationEngine.addAgentToGame(id, agent);
       addedAgents.push({
         id: agent.getId(),

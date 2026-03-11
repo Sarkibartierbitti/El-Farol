@@ -10,17 +10,13 @@ import {
  * Test script to run a simulation with different agent types
  */
 async function testSimulation() {
-  console.log('🚀 Starting El Farol Bar Problem Simulation Test\n');
+  console.log('starting test simulation\n');
 
   // Create simulation engine
   const engine = new SimulationEngine();
   const sandbox = new AgentSandbox();
-  
-  // Create factory without explicit random - it will create its own
-  // This avoids the SeededRandom export issue with ts-node
-  const factory = new AgentFactory(sandbox);
 
-  // Create a game
+  // create game
   const game = engine.createGame({
     name: 'Test Simulation',
     description: 'Testing different agent strategies',
@@ -80,6 +76,9 @@ async function testSimulation() {
   console.log(`   - ${agentConfigs.filter(a => a.builtInType === BuiltInAgentType.MOVING_AVERAGE).length} Moving Average agents`);
   console.log(`   - ${agentConfigs.filter(a => a.builtInType === BuiltInAgentType.ADAPTIVE).length} Adaptive agents\n`);
 
+  // Create factory with game ID as seed so each agent gets independent RNG
+  const factory = new AgentFactory(sandbox, undefined, game.getId());
+
   // Add agents to game
   // Create initial context for agents (empty history at start)
   const initialContext = {
@@ -95,8 +94,8 @@ async function testSimulation() {
     }
   };
 
-  for (const config of agentConfigs) {
-    const agent = factory.createAgent(config, initialContext);
+  for (let i = 0; i < agentConfigs.length; i++) {
+    const agent = factory.createAgent(agentConfigs[i]!, initialContext, i);
     game.addAgent(agent);
   }
 

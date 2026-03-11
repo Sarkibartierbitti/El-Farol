@@ -4,6 +4,7 @@
   "description": "Backend for El Farol Bar Problem simulation",
   "main": "src/index.ts",
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "start": "node lib/index.js",

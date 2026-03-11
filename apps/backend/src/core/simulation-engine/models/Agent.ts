@@ -177,6 +177,138 @@ export class AdaptiveAgent extends BaseAgent {
   }
 }
 
+
+// goes when the bar was recently overcreowded
+export class ContrarianAgent extends BaseAgent {
+  private readonly lookback: number;
+
+  constructor(
+    id: string,
+    name: string = 'Contrarian Agent',
+    lookback: number = 1,
+    random?: SeededRandom
+  ) {
+    super(id, name, AgentType.BUILT_IN, random);
+    this.lookback = Math.max(1, lookback);
+  }
+
+  predict(history: number[], capacity: number): boolean {
+    if (history.length === 0) {
+      return this.random.randBool();
+    }
+
+    const recent = history.slice(-this.lookback);
+    const avg = recent.reduce((sum, val) => sum + val, 0) / recent.length;
+    return avg >= capacity;
+  }
+}
+
+// predicts a simple linear model and goes accordingly
+
+export class TrendFollowerAgent extends BaseAgent {
+  private readonly windowSize: number;
+
+  constructor(
+    id: string,
+    name: string = 'Trend Follower Agent',
+    windowSize: number = 4,
+    random?: SeededRandom
+  ) {
+    super(id, name, AgentType.BUILT_IN, random);
+    this.windowSize = Math.max(2, windowSize);
+  }
+
+  predict(history: number[], capacity: number): boolean {
+    if (history.length < 2) {
+      return this.random.randBool();
+    }
+
+    const window = history.slice(-this.windowSize);
+
+    let trendSum = 0;
+    for (let i = 1; i < window.length; i++) {
+      trendSum += window[i]! - window[i - 1]!;
+    }
+    const avgTrend = trendSum / (window.length - 1);
+
+    const predicted = window[window.length - 1]! + avgTrend;
+
+    return predicted < capacity;
+  }
+}
+
+// goes with a fixed probability
+export class LoyalAgent extends BaseAgent {
+  private readonly goProbability: number;
+
+  constructor(
+    id: string,
+    name: string = 'Loyal Agent',
+    goProbability: number = 0.7,
+    random?: SeededRandom
+  ) {
+    super(id, name, AgentType.BUILT_IN, random);
+    this.goProbability = Math.max(0, Math.min(1, goProbability));
+  }
+
+  predict(_history: number[], _capacity: number): boolean {
+    return this.random.random() < this.goProbability;
+  }
+}
+
+// regret minimizing agent
+
+export class RegretMinimizingAgent extends BaseAgent {
+  private goRegret: number = 0;
+  private stayRegret: number = 0;
+  private lastDecision: boolean | null = null;
+  private readonly learningRate: number;
+
+  constructor(
+    id: string,
+    name: string = 'Regret Minimizer Agent',
+    learningRate: number = 1.0,
+    random?: SeededRandom
+  ) {
+    super(id, name, AgentType.BUILT_IN, random);
+    this.learningRate = learningRate;
+  }
+
+  predict(history: number[], capacity: number): boolean {
+    // update regrets
+    if (this.lastDecision !== null && history.length > 0) {
+      const lastAttendance = history[history.length - 1]!;
+      const wasCrowded = lastAttendance > capacity;
+
+      if (this.lastDecision && wasCrowded) {
+
+        this.goRegret += this.learningRate;
+      } else if (!this.lastDecision && !wasCrowded) {
+        this.stayRegret += this.learningRate;
+      }
+    }
+    // no data -- random
+    const totalRegret = this.goRegret + this.stayRegret;
+    let goProbability: number;
+
+    if (totalRegret === 0) {
+      goProbability = 0.5;
+    } else {
+      goProbability = this.stayRegret / totalRegret;
+    }
+
+    const decision = this.random.random() < goProbability;
+    this.lastDecision = decision;
+    return decision;
+  }
+
+  reset(): void {
+    this.goRegret = 0;
+    this.stayRegret = 0;
+    this.lastDecision = null;
+  }
+}
+
 //agent that is controlled by a human
 export class HumanAgent extends BaseAgent {
   private pendingDecision: boolean | null = null;

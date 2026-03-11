@@ -9,6 +9,10 @@ const AGENT_OPTIONS = [
   { value: BuiltInAgentType.THRESHOLD, label: 'Threshold' },
   { value: BuiltInAgentType.MOVING_AVERAGE, label: 'Moving Average' },
   { value: BuiltInAgentType.ADAPTIVE, label: 'Adaptive' },
+  { value: BuiltInAgentType.CONTRARIAN, label: 'Contrarian' },
+  { value: BuiltInAgentType.TREND_FOLLOWER, label: 'Trend Follower' },
+  { value: BuiltInAgentType.LOYAL, label: 'Loyal' },
+  { value: BuiltInAgentType.REGRET_MINIMIZING, label: 'Regret Minimizing' },
 ];
 
 interface SimulationControls {
@@ -40,6 +44,9 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
   const isRunning = status === 'creating' || status === 'simulating';
   const isDone = status === 'done' || status === 'error';
 
+  function setField<K extends keyof SimulationFormValues>(key: K, value: SimulationFormValues[K]) {
+    setForm(f => ({ ...f, [key]: value }));
+  }
 
   function setAgentCount(index: number, count: number) {
     setAgents(a => a.map((entry, i) => (i === index ? { ...entry, count } : entry)));
@@ -47,6 +54,14 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
 
   function setAgentType(index: number, type: BuiltInAgentType) {
     setAgents(a => a.map((entry, i) => (i === index ? { ...entry, type } : entry)));
+  }
+
+  function addAgentRow() {
+    setAgents(a => [...a, { type: BuiltInAgentType.RANDOM, count: 10 }]);
+  }
+
+  function removeAgentRow(index: number) {
+    setAgents(a => a.filter((_, i) => i !== index));
   }
 
   const totalAgents = agents.reduce((sum, a) => sum + a.count, 0);
@@ -57,66 +72,158 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
     onRun(form, agents);
   }
 
+
+
+  function handleNumericChange(
+    key: keyof SimulationFormValues,
+    raw: string,
+    min: number,
+    max: number,
+  ) {
+    const digits = raw.replace(/\D/g, '');
+    if (digits === '') {
+      setField(key, min as SimulationFormValues[typeof key]);
+      return;
+    }
+    const num = Math.max(min, Math.min(Number(digits), max));
+    setField(key, num as SimulationFormValues[typeof key]);
+  }
+
+  function handleDecimalChange(
+    key: keyof SimulationFormValues,
+    raw: string,
+    min: number,
+  ) {
+    const cleaned = raw.replace(/[^\d.]/g, '');          
+    if (cleaned === '' || cleaned === '.') {
+      setField(key, min as SimulationFormValues[typeof key]);
+      return;
+    }
+    const num = Math.max(min, parseFloat(cleaned));
+    if (!isNaN(num)) setField(key, num as SimulationFormValues[typeof key]);
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <section>
-        <h3 className="text-xs font-bold mb-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 min-w-0">
+      <section className="min-w-0">
+        <h3 className="text-xs font-bold mb-3 break-words">
           Настройки симуляции
         </h3>
         <div className="flex flex-col gap-5">
           <Input
             label="Name"
             value={form.name}
+            onChange={e => setField('name', e.target.value)}
             disabled={isRunning}
           />
           <Input
             label="Количество агентов"
-            type="number"
-            min={2}
-            max={1000}
-            value={form.numAgents}
+            type="text"
+            inputMode="numeric"
+            value={String(form.numAgents)}
+            onChange={e => handleNumericChange('numAgents', e.target.value, 2, 1000)}
             disabled={isRunning}
           />
           <Input
-            label="Capacity"
-            type="number"
-            min={1}
-            max={99}
-            value={form.capacityPercent}
+            label="Capacity (%) от общего количества агентов"
+            type="text"
+            inputMode="numeric"
+            value={String(form.capacityPercent)}
+            onChange={e => handleNumericChange('capacityPercent', e.target.value, 1, 99)}
             disabled={isRunning}
           />
           <Input
             label="Раунды"
-            type="number"
-            min={1}
-            max={1000}
-            value={form.numRounds}
+            type="text"
+            inputMode="numeric"
+            value={String(form.numRounds)}
+            onChange={e => handleNumericChange('numRounds', e.target.value, 1, 1000)}
             disabled={isRunning}
           />
         </div>
       </section>
 
+      <section className="min-w-0">
+        <h3 className="text-xs font-bold mb-3 break-words">
+          Правила поощерения агентов
+        </h3>
+        <p className="text-xs text-black-400 mb-3 break-words">
+          Полезность = посещение * мультипликатор (положительный, если посещение ниже capacity, иначе отрицательный)
+        </p>
+        <div className="grid grid-cols-2 gap-3 min-w-0 [&>div]:min-w-0">
+          <Input
+            label="+ мульт"
+            type="text"
+            inputMode="decimal"
+            value={String(form.positiveMultiplier)}
+            onChange={e => handleDecimalChange('positiveMultiplier', e.target.value, 0)}
+            disabled={isRunning}
+          />
+          <Input
+            label="− мульт"
+            type="text"
+            inputMode="decimal"
+            value={String(form.negativeMultiplier)}
+            onChange={e => handleDecimalChange('negativeMultiplier', e.target.value, 0)}
+            disabled={isRunning}
+          />
+        </div>
+      </section>
 
-      <section>
+      <section className="min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
+          <h3 className="text-xs font-bold break-words">
+            Участвующие агенты
+          </h3>
+          <button
+            type="button"
+            onClick={addAgentRow}
+            disabled={isRunning}
+            className="text-xs text-[#9871f7] hover:text-[#8760e6] disabled:opacity-40"
+          >
+            + добавить ряд
+          </button>
+        </div>
+      </section>
+
+      <section className="min-w-0">
         <div className="flex flex-col gap-2">
           {agents.map((entry, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Select
-                options={AGENT_OPTIONS}
-                value={entry.type}
-                onChange={e => setAgentType(i, e.target.value as BuiltInAgentType)}
-                disabled={isRunning}
-                className="flex-1"
-              />
+            <div key={i} className="flex items-center gap-2 min-w-0">
+              <div className="flex-1 min-w-0">
+                <Select
+                  options={AGENT_OPTIONS}
+                  value={entry.type}
+                  onChange={e => setAgentType(i, e.target.value as BuiltInAgentType)}
+                  disabled={isRunning}
+                  className="w-full min-w-0"
+                />
+              </div>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min={0}
                 max={form.numAgents}
-                value={entry.count}
-                onChange={e => setAgentCount(i, Number(e.target.value))}
+                value={String(entry.count)}
+                onChange={e => {
+                  const raw = e.target.value.replace(/\D/g, '');  
+                  if (raw === '') {
+                    setAgentCount(i, 0);
+                    return;
+                  }
+                  const num = Number(raw);
+                  setAgentCount(i, Math.min(num, form.numAgents));
+                }}
                 disabled={isRunning}
-                className="w-16 rounded-md text-center flex items-center justify-center border-2 border-black-300"
+                className="min-w-0 w-12 shrink-0 rounded-md text-center border-2 border-black-300"
               />
+              <button
+                type="button"
+                onClick={() => removeAgentRow(i)}
+                disabled={isRunning || agents.length <= 1}
+                className="text-[#9871f7] hover:text-[#8760e6] disabled:opacity-40"
+                aria-label="Remove"
+              ></button>
             </div>
           ))}
         </div>

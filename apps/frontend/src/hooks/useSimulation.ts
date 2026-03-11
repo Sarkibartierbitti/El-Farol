@@ -10,6 +10,7 @@ interface SimulationState {
   gameId: string | null;
   stats: GameStats | null;
   capacity: number | null;
+  numAgents: number | null;
   chartData: ChartPoint[];
   duration: number | null;
 }
@@ -20,6 +21,7 @@ const initial: SimulationState = {
   gameId: null,
   stats: null,
   capacity: null,
+  numAgents: null,
   chartData: [],
   duration: null,
 };
@@ -62,6 +64,7 @@ export function useSimulation() {
           gameId: result.gameId,
           stats: result.finalStats,
           capacity: game.config.capacity,
+          numAgents: game.config.numAgents,
           chartData,
           duration: result.duration,
         });

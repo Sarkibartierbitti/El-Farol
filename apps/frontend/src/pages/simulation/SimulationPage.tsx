@@ -1,4 +1,5 @@
-import {
+import { useRef, useState, useCallback, useEffect } from 'react';
+  import {
     LineChart,
     Line,
     XAxis,
@@ -11,6 +12,10 @@ import {
   import { useSimulation } from '../../hooks/useSimulation';
   import { SimulationControls } from './SimulationControls';
   import type { GameStats } from '../../types';
+
+  const SIDEBAR_MIN = 240;
+  const SIDEBAR_MAX = 560;
+  const SIDEBAR_DEFAULT = 340;
   
   function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
     return (
@@ -61,26 +66,70 @@ import {
     );
   }
   
-  export function SimulationPage() {
+export function SimulationPage() {
     const sim = useSimulation();
     const showChart = sim.chartData.length > 0;
     const showStats = sim.stats !== null && sim.capacity !== null;
-  
+
+    const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+    const isDragging = useRef(false);
+    const startX = useRef(0);
+    const startWidth = useRef(SIDEBAR_DEFAULT);
+
+    const handleResizeStart = useCallback((e: React.MouseEvent) => {
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = sidebarWidth;
+      e.preventDefault();
+    }, [sidebarWidth]);
+
+    const handleMouseMove = useCallback(
+      (e: MouseEvent) => {
+        if (!isDragging.current) return;
+        const dx = e.clientX - startX.current;
+        const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth.current + dx));
+        setSidebarWidth(next);
+      },
+      []
+    );
+
+    const handleMouseUp = useCallback(() => {
+      isDragging.current = false;
+    }, []);
+
+    useEffect(() => {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [handleMouseMove, handleMouseUp]);
+
     return (
       <div>
         <div className="flex flex-col lg:flex-row gap-6">
-          <aside>
-            <div className="bg-white border border-black-200 p-5">
+          <aside
+            className="relative shrink-0"
+            style={{ width: sidebarWidth }}
+          >
+            <div className="bg-white border border-black-200 p-5 ">
               <SimulationControls
                 status={sim.status}
                 onRun={sim.run}
                 onReset={sim.reset}
               />
             </div>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={handleResizeStart}
+              className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[#9871f7]/30 active:bg-[#9871f7]/50"
+            />
           </aside>
   
           {/* Main content */}
-          <div className="flex min-w-0 flex flex-col gap-5">
+          <div className="flex min-w-0 flex-col gap-5">
   
             {/* Error state */}
             {sim.status === 'error' && sim.error && (
@@ -119,6 +168,7 @@ import {
                     <YAxis
                       tick={{ fontSize: 11 }}
                       label={{ value: 'Посещение', angle: -90, position: 'insideLeft' }}
+                      domain={[0, sim.numAgents ?? 0]}
                     />
                     <Legend
                         wrapperStyle={{ fontSize: 12 }}

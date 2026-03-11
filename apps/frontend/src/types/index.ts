@@ -11,6 +11,10 @@ export enum GameStatus {
     THRESHOLD = 'threshold',
     MOVING_AVERAGE = 'moving_average',
     ADAPTIVE = 'adaptive',
+    CONTRARIAN = 'contrarian',
+    TREND_FOLLOWER = 'trend_follower',
+    LOYAL = 'loyal',
+    REGRET_MINIMIZING = 'regret_minimizing',
   }
   
   export interface BenefitRules {
