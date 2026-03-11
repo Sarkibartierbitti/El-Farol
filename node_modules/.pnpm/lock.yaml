@@ -11,6 +11,9 @@ importers:
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1
+      hono:
+        specifier: ^4.6.14
+        version: 4.10.6
       stream:
         specifier: ^0.0.3
         version: 0.0.3
