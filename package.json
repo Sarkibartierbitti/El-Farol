@@ -12,7 +12,7 @@
     "build:backend": "pnpm --filter @el-farol/backend build",
     "deploy": "./scripts/deploy.sh",
     "deploy:prod": "./scripts/deploy.sh --prod",
-    "db:push": "pnpm exec prisma db push --schema=apps/backend/prisma/schema.prisma"
+    "db:push": "pnpm --filter @el-farol/backend exec prisma db push"
   },
   "dependencies": {
     "hono": "^4.6.14",

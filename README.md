@@ -269,9 +269,9 @@ Vercel Deployment:
 
 1. Set up a PostgreSQL database (e.g. Neon, Supabase, Vercel Postgres).
 2. Add DATABASE_URL in Vercel (or connect Supabase via Vercel integration—it sets POSTGRES_PRISMA_URL, which we use automatically).
-3. Run migrations (once): from project root,
-   pnpm exec prisma migrate deploy --schema=apps/backend/prisma/schema.prisma
-   (use your prod DATABASE_URL)
+3. Create tables (once): open a terminal on your machine, cd to this project, then run:
+   DATABASE_URL="postgresql://postgres.XXX:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require" pnpm db:push
+   (Replace XXX with your Supabase project ref, PASSWORD with your DB password. Or copy POSTGRES_PRISMA_URL from Vercel env vars.)
 4. Deploy:
    ./scripts/deploy.sh          # preview
    ./scripts/deploy.sh --prod   # production
