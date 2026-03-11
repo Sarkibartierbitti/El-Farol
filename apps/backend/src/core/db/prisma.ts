@@ -1,5 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 
+// Vercel+Supabase integration provides POSTGRES_PRISMA_URL, not DATABASE_URL
+if (process.env.POSTGRES_PRISMA_URL && !process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL;
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };

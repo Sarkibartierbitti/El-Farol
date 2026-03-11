@@ -268,7 +268,7 @@ curl http://localhost:3001/health                    # backend health check
 Vercel Deployment:
 
 1. Set up a PostgreSQL database (e.g. Neon, Supabase, Vercel Postgres).
-2. Add DATABASE_URL in Vercel Project Settings → Environment Variables.
+2. Add DATABASE_URL in Vercel (or connect Supabase via Vercel integration—it sets POSTGRES_PRISMA_URL, which we use automatically).
 3. Run migrations (once): from project root,
    pnpm exec prisma migrate deploy --schema=apps/backend/prisma/schema.prisma
    (use your prod DATABASE_URL)
