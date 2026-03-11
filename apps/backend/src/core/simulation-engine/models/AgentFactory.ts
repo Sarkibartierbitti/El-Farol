@@ -9,6 +9,10 @@ import {
   ThresholdAgent,
   MovingAverageAgent,
   AdaptiveAgent,
+  ContrarianAgent,
+  TrendFollowerAgent,
+  LoyalAgent,
+  RegretMinimizingAgent,
   HumanAgent,
   CustomAgent
 } from './Agent';
@@ -22,19 +26,22 @@ export class AgentFactory {
   private sandbox: AgentSandbox;
   private random?: SeededRandom;
 
-  constructor(sandbox?: AgentSandbox, random?: SeededRandom) {
+  private baseSeed?: string | number;
+
+  constructor(sandbox?: AgentSandbox, random?: SeededRandom, baseSeed?: string | number) {
     this.sandbox = sandbox ?? new AgentSandbox();
     this.random = random;
+    this.baseSeed = baseSeed;
   }
 
   //create an agent from configuration
-  createAgent(config: AgentConfig, context?: AgentContext): BaseAgent {
+  createAgent(config: AgentConfig, context?: AgentContext, agentIndex?: number): BaseAgent {
     const id = uuidv4();
     const name = config.name;
 
     switch (config.type) {
       case AgentType.BUILT_IN:
-        return this.createBuiltInAgent(id, name, config, context);
+        return this.createBuiltInAgent(id, name, config, context, agentIndex);
 
       case AgentType.CUSTOM:
         if (!config.customCode) {
@@ -43,7 +50,7 @@ export class AgentFactory {
         if (!context) {
           throw new Error('Custom agent requires context for code execution');
         }
-        return this.createCustomAgent(id, name, config.customCode, context);
+        return this.createCustomAgent(id, name, config.customCode, context, agentIndex);
 
       case AgentType.HUMAN:
         return this.createHumanAgent(id, name, config);
@@ -57,14 +64,18 @@ export class AgentFactory {
     id: string,
     name: string,
     config: AgentConfig,
-    _context?: AgentContext
+    _context?: AgentContext,
+    agentIndex?: number
   ): BaseAgent {
     const type = config.builtInType ?? BuiltInAgentType.RANDOM;
     const params = config.parameters ?? {};
+    const rng = this.baseSeed != null && agentIndex != null
+      ? new SeededRandom(`${this.baseSeed}-${agentIndex}`)
+      : this.random;
 
     switch (type) {
       case BuiltInAgentType.RANDOM:
-        return new RandomAgent(id, name, this.random);
+        return new RandomAgent(id, name, rng);
 
       case BuiltInAgentType.THRESHOLD:
         return new ThresholdAgent(
@@ -72,7 +83,7 @@ export class AgentFactory {
           name,
           (params.threshold as number) ?? 1.0,
           (params.goProbability as number) ?? 0.8,
-          this.random
+          rng
         );
 
       case BuiltInAgentType.MOVING_AVERAGE:
@@ -81,7 +92,7 @@ export class AgentFactory {
           name,
           (params.windowSize as number) ?? 5,
           (params.threshold as number) ?? 0.6,
-          this.random
+          rng
         );
 
       case BuiltInAgentType.ADAPTIVE:
@@ -90,7 +101,39 @@ export class AgentFactory {
           name,
           (params.initialThreshold as number) ?? 0.6,
           (params.adaptationRate as number) ?? 0.1,
-          this.random
+          rng
+        );
+
+      case BuiltInAgentType.CONTRARIAN:
+        return new ContrarianAgent(
+          id,
+          name,
+          (params.lookback as number) ?? 1,
+          rng
+        );
+
+      case BuiltInAgentType.TREND_FOLLOWER:
+        return new TrendFollowerAgent(
+          id,
+          name,
+          (params.windowSize as number) ?? 4,
+          rng
+        );
+
+      case BuiltInAgentType.LOYAL:
+        return new LoyalAgent(
+          id,
+          name,
+          (params.goProbability as number) ?? 0.7,
+          rng
+        );
+
+      case BuiltInAgentType.REGRET_MINIMIZING:
+        return new RegretMinimizingAgent(
+          id,
+          name,
+          (params.learningRate as number) ?? 1.0,
+          rng
         );
 
       default:
@@ -103,7 +146,8 @@ export class AgentFactory {
     id: string,
     name: string,
     code: string,
-    context: AgentContext
+    context: AgentContext,
+    agentIndex?: number
   ): CustomAgent {
     // create executor that will be used for each prediction
     const executor = (history: number[], capacity: number): boolean => {
@@ -117,7 +161,9 @@ export class AgentFactory {
       return codeExecutor(code);
     };
 
-    return new CustomAgent(id, name, code, executor, this.random);
+    return new CustomAgent(id, name, code, executor, this.baseSeed != null && agentIndex != null
+      ? new SeededRandom(`${this.baseSeed}-${agentIndex}`)
+      : this.random);
   }
 
   //create human agent
@@ -138,7 +184,8 @@ export class AgentFactory {
   createMultipleAgents(
     count: number,
     config: AgentConfig,
-    context?: AgentContext
+    context?: AgentContext,
+    startIndex?: number
   ): BaseAgent[] {
     const agents: BaseAgent[] = [];
     for (let i = 0; i < count; i++) {
@@ -146,7 +193,7 @@ export class AgentFactory {
         ...config,
         name: config.name ? `${config.name} ${i + 1}` : `Agent ${i + 1}`
       };
-      agents.push(this.createAgent(agentConfig, context));
+      agents.push(this.createAgent(agentConfig, context, (startIndex ?? 0) + i));
     }
     return agents;
   }

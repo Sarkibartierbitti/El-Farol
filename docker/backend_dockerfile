@@ -12,6 +12,7 @@ FROM base AS deps
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
 COPY apps/backend/package.json ./apps/backend/
+COPY apps/backend/prisma ./apps/backend/prisma
 COPY apps/shared/package.json ./apps/shared/
 
 # Fix DNS resolution issues in Docker build and install deps

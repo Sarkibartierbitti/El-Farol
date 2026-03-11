@@ -1,26 +1,11 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGlobalSeededRandom = exports.initGlobalSeededRandom = exports.createSeededRandom = exports.SeededRandom = void 0;
-__exportStar(require("./src/types/agent"), exports);
-__exportStar(require("./src/types/game"), exports);
-__exportStar(require("./src/types/round"), exports);
-var random_1 = require("./src/utils/random");
-Object.defineProperty(exports, "SeededRandom", { enumerable: true, get: function () { return random_1.SeededRandom; } });
-Object.defineProperty(exports, "createSeededRandom", { enumerable: true, get: function () { return random_1.createSeededRandom; } });
-Object.defineProperty(exports, "initGlobalSeededRandom", { enumerable: true, get: function () { return random_1.initGlobalSeededRandom; } });
-Object.defineProperty(exports, "getGlobalSeededRandom", { enumerable: true, get: function () { return random_1.getGlobalSeededRandom; } });
-//# sourceMappingURL=index.js.map
+// Import enums first, then re-export (fixes ts-node enum re-export issue)
+import { AgentType, BuiltInAgentType } from './src/types/agent';
+import { GameStatus } from './src/types/game';
+import { SeededRandom, createSeededRandom, initGlobalSeededRandom, getGlobalSeededRandom } from './src/utils/random';
+// Re-export enums as values (must be done this way for ts-node)
+export { AgentType, BuiltInAgentType, GameStatus };
+export { SeededRandom, createSeededRandom, initGlobalSeededRandom, getGlobalSeededRandom };
+// Re-export all types and interfaces
+export * from './src/types/agent';
+export * from './src/types/game';
+export * from './src/types/round';

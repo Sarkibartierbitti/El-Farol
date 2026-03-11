@@ -9,8 +9,10 @@ exports.initGlobalSeededRandom = initGlobalSeededRandom;
 exports.getGlobalSeededRandom = getGlobalSeededRandom;
 const seedrandom_1 = __importDefault(require("seedrandom"));
 class SeededRandom {
+    rng;
+    seed;
     constructor(seed) {
-        this.seed = seed !== null && seed !== void 0 ? seed : Date.now();
+        this.seed = seed ?? Date.now();
         this.rng = (0, seedrandom_1.default)(String(this.seed));
     }
     setSeed(seed) {
@@ -70,4 +72,3 @@ function getGlobalSeededRandom() {
     }
     return globalSeededRandom;
 }
-//# sourceMappingURL=random.js.map

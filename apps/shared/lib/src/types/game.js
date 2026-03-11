@@ -9,4 +9,3 @@ var GameStatus;
     GameStatus["COMPLETED"] = "completed";
     GameStatus["CANCELLED"] = "cancelled";
 })(GameStatus || (exports.GameStatus = GameStatus = {}));
-//# sourceMappingURL=game.js.map

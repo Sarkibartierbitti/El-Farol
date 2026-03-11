@@ -15,6 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGlobalSeededRandom = exports.initGlobalSeededRandom = exports.createSeededRandom = exports.SeededRandom = exports.GameStatus = exports.BuiltInAgentType = exports.AgentType = void 0;
+// Import enums first, then re-export (fixes ts-node enum re-export issue)
 const agent_1 = require("./src/types/agent");
 Object.defineProperty(exports, "AgentType", { enumerable: true, get: function () { return agent_1.AgentType; } });
 Object.defineProperty(exports, "BuiltInAgentType", { enumerable: true, get: function () { return agent_1.BuiltInAgentType; } });
@@ -25,7 +26,7 @@ Object.defineProperty(exports, "SeededRandom", { enumerable: true, get: function
 Object.defineProperty(exports, "createSeededRandom", { enumerable: true, get: function () { return random_1.createSeededRandom; } });
 Object.defineProperty(exports, "initGlobalSeededRandom", { enumerable: true, get: function () { return random_1.initGlobalSeededRandom; } });
 Object.defineProperty(exports, "getGlobalSeededRandom", { enumerable: true, get: function () { return random_1.getGlobalSeededRandom; } });
+// Re-export all types and interfaces
 __exportStar(require("./src/types/agent"), exports);
 __exportStar(require("./src/types/game"), exports);
 __exportStar(require("./src/types/round"), exports);
-//# sourceMappingURL=index.js.map

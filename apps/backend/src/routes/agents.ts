@@ -9,7 +9,6 @@ import type { AgentConfig } from '@el-farol/shared';
 
 const agentsRouter = new Hono();
 const simulationEngine = new SimulationEngine();
-const agentFactory = new AgentFactory();
 
 // prisma to shared
 function toSharedBuiltInType(type: PrismaBuiltInAgentType | null): BuiltInAgentType | undefined{
@@ -19,6 +18,10 @@ function toSharedBuiltInType(type: PrismaBuiltInAgentType | null): BuiltInAgentT
     [PrismaBuiltInAgentType.THRESHOLD]: BuiltInAgentType.THRESHOLD,
     [PrismaBuiltInAgentType.MOVING_AVERAGE]: BuiltInAgentType.MOVING_AVERAGE,
     [PrismaBuiltInAgentType.ADAPTIVE]: BuiltInAgentType.ADAPTIVE,
+    [PrismaBuiltInAgentType.CONTRARIAN]: BuiltInAgentType.CONTRARIAN,
+    [PrismaBuiltInAgentType.TREND_FOLLOWER]: BuiltInAgentType.TREND_FOLLOWER,
+    [PrismaBuiltInAgentType.LOYAL]: BuiltInAgentType.LOYAL,
+    [PrismaBuiltInAgentType.REGRET_MINIMIZING]: BuiltInAgentType.REGRET_MINIMIZING,
   };
   return map[type];
 }
@@ -31,6 +34,10 @@ function toPrismaBuiltInType(type?: BuiltInAgentType): PrismaBuiltInAgentType | 
     [BuiltInAgentType.THRESHOLD]: PrismaBuiltInAgentType.THRESHOLD,
     [BuiltInAgentType.MOVING_AVERAGE]: PrismaBuiltInAgentType.MOVING_AVERAGE,
     [BuiltInAgentType.ADAPTIVE]: PrismaBuiltInAgentType.ADAPTIVE,
+    [BuiltInAgentType.CONTRARIAN]: PrismaBuiltInAgentType.CONTRARIAN,
+    [BuiltInAgentType.TREND_FOLLOWER]: PrismaBuiltInAgentType.TREND_FOLLOWER,
+    [BuiltInAgentType.LOYAL]: PrismaBuiltInAgentType.LOYAL,
+    [BuiltInAgentType.REGRET_MINIMIZING]: PrismaBuiltInAgentType.REGRET_MINIMIZING,
   };
   return map[type];
 }
@@ -50,8 +57,9 @@ agentsRouter.post('/games/:gameId/agents', async (c: Context) => {
       throw new HTTPException(404, { message: 'Game not found in simulation engine' });
     }
 
-
-    const agent = agentFactory.createAgent(body);
+    const agentIndex = game.getAgents().length;
+    const agentFactory = new AgentFactory(undefined, undefined, gameId);
+    const agent = agentFactory.createAgent(body, undefined, agentIndex);
     simulationEngine.addAgentToGame(gameId, agent);
 
     // db persistence

@@ -1,3 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-//# sourceMappingURL=game.js.map
+export var GameStatus;
+(function (GameStatus) {
+    GameStatus["DRAFT"] = "draft";
+    GameStatus["RUNNING"] = "running";
+    GameStatus["PAUSED"] = "paused";
+    GameStatus["COMPLETED"] = "completed";
+    GameStatus["CANCELLED"] = "cancelled";
+})(GameStatus || (GameStatus = {}));

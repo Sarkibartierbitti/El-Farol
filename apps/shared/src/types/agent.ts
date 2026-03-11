@@ -10,7 +10,11 @@ export enum BuiltInAgentType {
   RANDOM = 'random',
   THRESHOLD = 'threshold',
   MOVING_AVERAGE = 'moving_average',
-  ADAPTIVE = 'adaptive'
+  ADAPTIVE = 'adaptive',
+  CONTRARIAN = 'contrarian',
+  TREND_FOLLOWER = 'trend_follower',
+  LOYAL = 'loyal',
+  REGRET_MINIMIZING = 'regret_minimizing'
 }
 
 //config for built in
