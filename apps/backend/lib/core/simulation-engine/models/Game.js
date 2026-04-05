@@ -141,6 +141,26 @@ class Game {
             numAgents: this.config.numAgents
         };
     }
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+    getAgentBehaviorContext() {
+        const positiveMultiplier = Math.max(0, this.config.benefitRules?.positiveMultiplier ?? 1);
+        const negativeMultiplier = Math.max(0, this.config.benefitRules?.negativeMultiplier ?? 1);
+        const positiveSafe = Math.max(positiveMultiplier, 0.001);
+        const negativeSafe = Math.max(negativeMultiplier, 0.001);
+        const utilityRatioLog = Math.log(negativeSafe / positiveSafe);
+        const cautionShift = Math.tanh(utilityRatioLog);
+        const effectiveCapacity = this.clamp(this.config.capacity * (1 - (0.2 * cautionShift)), 1, this.config.numAgents);
+        return {
+            positiveMultiplier,
+            negativeMultiplier,
+            effectiveCapacity,
+            utilityGoBias: this.clamp(positiveSafe / (positiveSafe + negativeSafe), 0.1, 0.9),
+            cautionFactor: this.clamp(Math.sqrt(negativeSafe / positiveSafe), 0.5, 2),
+            rewardFactor: this.clamp(Math.sqrt(positiveSafe / negativeSafe), 0.5, 2),
+        };
+    }
     //check benefit for one round
     calculateBenefit(attendance) {
         const rules = this.config.benefitRules;
@@ -171,11 +191,12 @@ class Game {
         this.currentRound++;
         const roundId = (0, uuid_1.v4)();
         const history = this.attendanceHistory;
+        const behaviorContext = this.getAgentBehaviorContext();
         // collect agent decisions
         const decisions = [];
         let attendance = 0;
         for (const agent of this.agents) {
-            const decision = agent.predict(history, this.config.capacity);
+            const decision = agent.predict(history, this.config.capacity, behaviorContext);
             if (decision) {
                 attendance++;
             }

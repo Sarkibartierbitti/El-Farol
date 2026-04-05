@@ -27,10 +27,7 @@ class AgentFactory {
                 if (!config.customCode) {
                     throw new Error('Custom agent requires customCode');
                 }
-                if (!context) {
-                    throw new Error('Custom agent requires context for code execution');
-                }
-                return this.createCustomAgent(id, name, config.customCode, context, agentIndex);
+                return this.createCustomAgent(id, name, config.customCode, agentIndex);
             case shared_1.AgentType.HUMAN:
                 return this.createHumanAgent(id, name, config);
             default:
@@ -57,7 +54,7 @@ class AgentFactory {
             case shared_1.BuiltInAgentType.TREND_FOLLOWER:
                 return new Agent_1.TrendFollowerAgent(id, name, params.windowSize ?? 4, rng);
             case shared_1.BuiltInAgentType.LOYAL:
-                return new Agent_1.LoyalAgent(id, name, params.goProbability ?? 0.7, rng);
+                return new Agent_1.LoyalAgent(id, name, params.onRounds ?? 2, params.offRounds ?? 1, rng);
             case shared_1.BuiltInAgentType.REGRET_MINIMIZING:
                 return new Agent_1.RegretMinimizingAgent(id, name, params.learningRate ?? 1.0, rng);
             default:
@@ -65,14 +62,16 @@ class AgentFactory {
         }
     }
     //create agent with user code
-    createCustomAgent(id, name, code, context, agentIndex) {
-        // create executor that will be used for each prediction
+    createCustomAgent(id, name, code, agentIndex) {
+        const validation = this.sandbox.validateCode(code);
+        if (!validation.valid) {
+            throw new Error(`Invalid agent code: ${validation.error}`);
+        }
         const executor = (history, capacity) => {
             const execContext = {
                 attendanceHistory: history,
                 capacity,
-                roundNumber: context.roundNumber,
-                helpers: context.helpers
+                roundNumber: history.length + 1,
             };
             const codeExecutor = this.sandbox.createExecutor(execContext);
             return codeExecutor(code);

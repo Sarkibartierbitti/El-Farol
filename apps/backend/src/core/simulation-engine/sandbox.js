@@ -66,18 +66,22 @@ export class AgentSandbox {
                 }
             });
             try {
-                // wrap code in a function that returns a boolean
-                const wrappedCode = `
+                const statementWrapper = `
           (function() {
             ${code}
             if (typeof decision !== 'undefined') {
               return Boolean(decision);
             }
-            return Boolean(${code});
+            return undefined;
           })()
         `;
-                const result = vm.run(wrappedCode);
-                return Boolean(result);
+                const statementResult = vm.run(statementWrapper);
+                if (typeof statementResult !== 'undefined') {
+                    return Boolean(statementResult);
+                }
+                const expressionWrapper = `Boolean(${code})`;
+                const expressionResult = vm.run(expressionWrapper);
+                return Boolean(expressionResult);
             }
             catch (error) {
                 throw new Error(`Agent code execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
