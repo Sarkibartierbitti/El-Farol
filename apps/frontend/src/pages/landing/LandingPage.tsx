@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui';
+import { BUILT_IN_AGENT_ORDER, getBuiltInPreset } from '../../agentCatalog';
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -39,54 +40,34 @@ export function LandingPage() {
 
         <section>
           <h2 className="text-2xl font-bold">Типы агентов</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              {
-                name: 'Random',
-                description: 'Посещает бар с вероятностью 50% каждый раунд, не учитывая историю.',
-              },
-              {
-                name: 'Threshold',
-                description:
-                  "Посещает бар, если в прошлый раз бар был меньше, чем [capacity]% от общеего числа студентов; остается дома в противном случае.",
-              },
-              {
-                name: 'Moving Average',
-                description:
-                  'Смотрит на посещение в зависимости от среднего значения за последние раунды.',
-              },
-              {
-                name: 'Adaptive',
-                description:
-                  'Adjusts its probability based on whether recent decisions paid off. Учитывает, было ли предыдущее решение выгодным.',
-              },
-              {
-                name: 'Contrarian',
-                description:
-                  'Посещает бар, если в прошлый раз бар был больше, чем [capacity]% от общеего числа студентов; остается дома в противном случае.',
-              },
-              {
-                name: 'Trend Follower',
-                description:
-                  'Смотрит на посещение в зависимости от среднего значения за последние раунды.',
-              },
-              {
-                name: 'Loyal',
-                description:
-                  'Посещает бар циклически, с периодом [onRounds] раундов посещения и [offRounds] раундов отсутствия.',
-              },
-              {
-                name: 'Regret Minimizing',
-                description:
-                  'Учитывает, было ли предыдущее решение выгодным и избегает повторения ошибок.',
-              },
-            ].map(s => (
-              <div key={s.name} className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="font-semibold text-gray-900 text-sm mb-1">{s.name}</p>
-                <p className="text-gray-500 text-sm">{s.description}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {BUILT_IN_AGENT_ORDER.map((type) => {
+              const preset = getBuiltInPreset(type);
+              return (
+                <div key={preset.label} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <p className="font-semibold text-gray-900 text-sm mb-2">{preset.label}</p>
+                  <p className="text-gray-700 text-sm mb-3">{preset.summary}</p>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>
+                      <span className="font-medium text-gray-900">Правило:</span> {preset.formula}
+                    </p>
+                    <p>
+                      <span className="font-medium text-gray-900">Параметры по умолчанию:</span>{' '}
+                      {preset.parameters.length > 0
+                        ? preset.parameters
+                            .map((parameter) => `${parameter.label} = ${parameter.defaultValue}`)
+                            .join(', ')
+                        : 'нет, поведение полностью случайное'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          <p className="mt-4 text-sm text-gray-600">
+            Во всех формулах `capacity` это допустимая посещаемость бара в людях, а `history`
+            это массив посещаемости по завершенным раундам.
+          </p>
         </section>
         
             

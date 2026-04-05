@@ -17,20 +17,20 @@ import { useRef, useState, useCallback, useEffect } from 'react';
   const SIDEBAR_MAX = 560;
   const SIDEBAR_DEFAULT = 340;
   
-  function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-    return (
-      <div className="bg-white border border-black-100 p-5">
-        <p className="text-xs text-gray-400 uppercase">{label}</p>
-        <p className="text-2xl text-black-1000">{value}</p>
-      </div>
-    );
-  }
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="bg-white border border-black-100 p-5">
+      <p className="text-xs text-gray-400 uppercase">{label}</p>
+      <p className="text-2xl text-black-1000">{value}</p>
+      {sub ? <p className="mt-1 text-xs text-gray-500">{sub}</p> : null}
+    </div>
+  );
+}
   
-  function StatsGrid({ stats, capacity }: { stats: GameStats; capacity: number }) {
-    const efficiencyPct = (stats.efficiency * 100).toFixed(1);
-    const capacityPct = ((stats.averageAttendance / capacity) * 100).toFixed(0);
+function StatsGrid({ stats }: { stats: GameStats }) {
+  const efficiencyPct = (stats.efficiency * 100).toFixed(1);
   
-    return (
+  return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard
           label="Эффективность"
@@ -202,7 +202,7 @@ export function SimulationPage() {
             {showStats && (
               <div>
                 <h2 className="text-base font-semibold text-black-900 mb-3">Статистика</h2>
-                <StatsGrid stats={sim.stats!} capacity={sim.capacity!} />
+                <StatsGrid stats={sim.stats!} />
               </div>
             )}
           </div>

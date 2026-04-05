@@ -6,7 +6,7 @@ export enum GameStatus {
     CANCELLED = 'cancelled',
   }
   
-  export enum BuiltInAgentType {
+export enum BuiltInAgentType {
     RANDOM = 'random',
     THRESHOLD = 'threshold',
     MOVING_AVERAGE = 'moving_average',
@@ -16,6 +16,10 @@ export enum GameStatus {
     LOYAL = 'loyal',
     REGRET_MINIMIZING = 'regret_minimizing',
   }
+
+  export const CUSTOM_AGENT_TYPE = 'custom' as const;
+  export type CustomAgentType = typeof CUSTOM_AGENT_TYPE;
+  export type SimulationAgentType = BuiltInAgentType | CustomAgentType;
   
   export interface BenefitRules {
     positiveMultiplier?: number;
@@ -75,12 +79,20 @@ export enum GameStatus {
     roundsSummary: RoundSummary[];
   }
   
-  export interface AgentConfig {
+  export interface BuiltInAgentConfig {
     name: string;
     type: 'built_in';
     builtInType: BuiltInAgentType;
     parameters?: Record<string, unknown>;
   }
+
+  export interface CustomAgentConfig {
+    name: string;
+    type: 'custom';
+    customCode: string;
+  }
+
+  export type AgentConfig = BuiltInAgentConfig | CustomAgentConfig;
   
   export interface SimulationFormValues {
     name: string;
@@ -92,8 +104,11 @@ export enum GameStatus {
   }
   
   export interface AgentBatchEntry {
-    type: BuiltInAgentType;
+    type: SimulationAgentType;
     count: number;
+    parameters?: Record<string, number>;
+    customCode?: string;
+    name?: string;
   }
   
   export interface ChartPoint {

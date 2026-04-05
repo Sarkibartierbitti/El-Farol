@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import * as gamesApi from '../api/games';
 import type { GameStats, SimulationFormValues, AgentBatchEntry, ChartPoint } from '../types';
+import { CUSTOM_AGENT_TEMPLATE, getBuiltInPreset, isBuiltInAgentType } from '../agentCatalog';
 
 export type SimStatus = 'idle' | 'creating' | 'simulating' | 'done' | 'error';
 
@@ -36,12 +37,26 @@ export function useSimulation() {
       try {
         const game = await gamesApi.createGame(simForm);
 
-        const agents = agentBatch.flatMap(({ type, count }) =>
-          Array.from({ length: count }, (_, i) => ({
-            name: `${type}-${i + 1}`,
-            type: 'built_in' as const,
-            builtInType: type,
-          })),
+        const agents = agentBatch.flatMap((entry, rowIndex) =>
+          Array.from({ length: entry.count }, (_, i) => {
+            const sequence = `${rowIndex + 1}.${i + 1}`;
+
+            if (isBuiltInAgentType(entry.type)) {
+              const preset = getBuiltInPreset(entry.type);
+              return {
+                name: `${preset.label} ${sequence}`,
+                type: 'built_in' as const,
+                builtInType: entry.type,
+                parameters: entry.parameters,
+              };
+            }
+
+            return {
+              name: entry.name?.trim() || `Custom Agent ${sequence}`,
+              type: 'custom' as const,
+              customCode: entry.customCode?.trim() || CUSTOM_AGENT_TEMPLATE,
+            };
+          }),
         );
 
         if (agents.length > 0) {

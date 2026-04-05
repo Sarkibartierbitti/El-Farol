@@ -47,10 +47,7 @@ export class AgentFactory {
         if (!config.customCode) {
           throw new Error('Custom agent requires customCode');
         }
-        if (!context) {
-          throw new Error('Custom agent requires context for code execution');
-        }
-        return this.createCustomAgent(id, name, config.customCode, context, agentIndex);
+        return this.createCustomAgent(id, name, config.customCode, agentIndex);
 
       case AgentType.HUMAN:
         return this.createHumanAgent(id, name, config);
@@ -147,16 +144,18 @@ export class AgentFactory {
     id: string,
     name: string,
     code: string,
-    context: AgentContext,
     agentIndex?: number
   ): CustomAgent {
-    // create executor that will be used for each prediction
+    const validation = this.sandbox.validateCode(code);
+    if (!validation.valid) {
+      throw new Error(`Invalid agent code: ${validation.error}`);
+    }
+
     const executor = (history: number[], capacity: number): boolean => {
       const execContext: AgentContext = {
         attendanceHistory: history,
         capacity,
-        roundNumber: context.roundNumber,
-        helpers: context.helpers
+        roundNumber: history.length + 1,
       };
       const codeExecutor = this.sandbox.createExecutor(execContext);
       return codeExecutor(code);
@@ -199,4 +198,3 @@ export class AgentFactory {
     return agents;
   }
 }
-
