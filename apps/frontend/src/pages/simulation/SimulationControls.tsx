@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input, Select } from '../../components/ui';
 import type { AgentBatchEntry, SimulationFormValues } from '../../types';
 import { BuiltInAgentType, CUSTOM_AGENT_TYPE } from '../../types';
 import type { SimStatus } from '../../hooks/useSimulation';
 import {
   AGENT_OPTIONS,
+  CUSTOM_AGENT_EXAMPLE,
   CUSTOM_AGENT_TEMPLATE,
   getBuiltInPreset,
   getDefaultParameters,
@@ -25,6 +26,15 @@ interface AgentSettingsModalProps {
   onParameterChange: (key: string, value: number, field: AgentParameterField) => void;
   onCustomCodeChange: (code: string) => void;
   onNameChange: (name: string) => void;
+}
+
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" className="h-4 w-4 fill-none stroke-current" strokeWidth="3">
+      <path d="M45 14.67l-2.76 2a1 1 0 0 1-1 .11l-3.59-1.48a1 1 0 0 1-.61-.76l-.66-3.77a1 1 0 0 0-1-.84h-4.86a1 1 0 0 0-1 .77l-.93 3.72a1 1 0 0 1-.53.65l-3.3 1.66a1 1 0 0 1-1-.08l-3-2.13a1 1 0 0 0-1.31.12l-3.65 3.74a1 1 0 0 0-.13 1.26l1.87 2.88a1 1 0 0 1 .1.89L16.34 27a1 1 0 0 1-.68.63l-3.85 1.06a1 1 0 0 0-.74 1v4.74a1 1 0 0 0 .8 1l3.9.8a1 1 0 0 1 .72.57l1.42 3.15a1 1 0 0 1-.05.92l-2.13 3.63a1 1 0 0 0 .17 1.24L19.32 49a1 1 0 0 0 1.29.09L23.49 47a1 1 0 0 1 1-.1l3.74 1.67a1 1 0 0 1 .59.75l.66 3.79a1 1 0 0 0 1 .84h4.89a1 1 0 0 0 1-.86l.58-4a1 1 0 0 1 .58-.77l3.58-1.62a1 1 0 0 1 1 .09l3.14 2.12a1 1 0 0 0 1.3-.15L50 45.06a1 1 0 0 0 .09-1.27l-2.08-3a1 1 0 0 1-.09-1l1.48-3.43a1 1 0 0 1 .71-.59l3.66-.77a1 1 0 0 0 .8-1v-4.58a1 1 0 0 0-.8-1l-3.72-.78a1 1 0 0 1-.73-.62l-1.45-3.65a1 1 0 0 1 .11-.94l2.15-3.14A1 1 0 0 0 50 18l-3.71-3.25A1 1 0 0 0 45 14.67Z" />
+      <circle cx="32.82" cy="31.94" r="9.94" />
+    </svg>
+  );
 }
 
 const defaultForm: SimulationFormValues = {
@@ -177,7 +187,15 @@ function AgentSettingsModal({
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onCustomCodeChange(CUSTOM_AGENT_EXAMPLE)}
+                disabled={disabled}
+              >
+                Вставить пример
+              </Button>
               <Button type="button" variant="secondary" onClick={onClose}>
                 Готово
               </Button>
@@ -319,23 +337,6 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
     }
   }
 
-  const rowDescriptions = useMemo(
-    () =>
-      agents.map((entry) => {
-        if (isBuiltInAgentType(entry.type)) {
-          const preset = getBuiltInPreset(entry.type);
-          return preset.parameters.length > 0
-            ? preset.parameters
-                .map((field) => `${field.label}=${entry.parameters?.[field.key] ?? field.defaultValue}`)
-                .join(', ')
-            : 'без дополнительных параметров';
-        }
-
-        return entry.name?.trim() || 'custom code';
-      }),
-    [agents],
-  );
-
   return (
     <>
       <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-6">
@@ -415,59 +416,51 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
 
           <div className="flex flex-col gap-2">
             {agents.map((entry, index) => (
-              <div key={`${entry.type}-${index}`} className="border border-black-100 bg-[#fcfcfc] p-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-7 shrink-0 text-xs font-medium text-black-500">{index + 1}.</span>
-                  <div className="flex-1 min-w-0">
-                    <Select
-                      options={AGENT_OPTIONS}
-                      value={entry.type}
-                      onChange={(event) => setAgentType(index, event.target.value as AgentBatchEntry['type'])}
-                      disabled={isRunning}
-                      className="w-full min-w-0"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    min={0}
-                    max={form.numAgents}
-                    value={String(entry.count)}
-                    onChange={(event) => {
-                      const raw = event.target.value.replace(/\D/g, '');
-                      if (raw === '') {
-                        setAgentCount(index, 0);
-                        return;
-                      }
-                      setAgentCount(index, Math.min(Number(raw), form.numAgents));
-                    }}
+              <div key={`${entry.type}-${index}`} className="flex items-center gap-2 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    options={AGENT_OPTIONS}
+                    value={entry.type}
+                    onChange={(event) => setAgentType(index, event.target.value as AgentBatchEntry['type'])}
                     disabled={isRunning}
-                    className="min-w-0 w-14 shrink-0 border-2 border-black-300 text-center"
+                    className="w-full min-w-0"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setActiveSettingsIndex(index)}
-                    disabled={isRunning}
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-black-200 text-black-600 hover:border-[#9871f7] hover:text-[#9871f7] disabled:opacity-40"
-                    aria-label={`Открыть настройки агента ${index + 1}`}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-2">
-                      <path d="M12 3.75l1.2 2.61 2.84.42-2.06 2.02.49 2.85L12 10.84l-2.47 1.81.49-2.85-2.06-2.02 2.84-.42L12 3.75z" />
-                      <circle cx="12" cy="12" r="3.25" />
-                      <path d="M4.5 12h1.75m11.5 0H19.5M12 4.5v1.75M12 17.75v1.75M6.7 6.7l1.24 1.24m8.12 8.12 1.24 1.24m0-10.6-1.24 1.24M7.94 16.06 6.7 17.3" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeAgentRow(index)}
-                    disabled={isRunning || agents.length <= 1}
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-black-200 text-[#9871f7] hover:border-[#8760e6] hover:text-[#8760e6] disabled:opacity-40"
-                    aria-label="Remove"
-                  >
-                    x
-                  </button>
                 </div>
-                <p className="mt-2 text-xs text-black-500">{rowDescriptions[index]}</p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  min={0}
+                  max={form.numAgents}
+                  value={String(entry.count)}
+                  onChange={(event) => {
+                    const raw = event.target.value.replace(/\D/g, '');
+                    if (raw === '') {
+                      setAgentCount(index, 0);
+                      return;
+                    }
+                    setAgentCount(index, Math.min(Number(raw), form.numAgents));
+                  }}
+                  disabled={isRunning}
+                  className="min-w-0 w-12 shrink-0 rounded-md text-center border-2 border-black-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setActiveSettingsIndex(index)}
+                  disabled={isRunning}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black-200 text-black-600 hover:border-[#9871f7] hover:text-[#9871f7] disabled:opacity-40"
+                  aria-label={`Открыть настройки агента ${index + 1}`}
+                >
+                  <SettingsIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeAgentRow(index)}
+                  disabled={isRunning || agents.length <= 1}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black-200 text-[#9871f7] hover:border-[#8760e6] hover:text-[#8760e6] disabled:opacity-40"
+                  aria-label="Remove"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>

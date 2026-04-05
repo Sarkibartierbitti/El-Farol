@@ -4,6 +4,15 @@ import {
 } from '@el-farol/shared';
 import { SeededRandom } from '@el-farol/shared';
 
+export interface AgentBehaviorContext {
+  positiveMultiplier: number;
+  negativeMultiplier: number;
+  effectiveCapacity: number;
+  utilityGoBias: number;
+  cautionFactor: number;
+  rewardFactor: number;
+}
+
 //abstract class for all agents
 export abstract class BaseAgent implements IAgent {
   protected readonly id: string;
@@ -30,7 +39,27 @@ export abstract class BaseAgent implements IAgent {
     return this.type;
   }
 
-  abstract predict(history: number[], capacity: number): boolean;
+  protected getEffectiveCapacity(capacity: number, behavior?: AgentBehaviorContext): number {
+    return behavior?.effectiveCapacity ?? capacity;
+  }
+
+  protected getUtilityGoBias(behavior?: AgentBehaviorContext): number {
+    return behavior?.utilityGoBias ?? 0.5;
+  }
+
+  protected getCautionFactor(behavior?: AgentBehaviorContext): number {
+    return behavior?.cautionFactor ?? 1;
+  }
+
+  protected getRewardFactor(behavior?: AgentBehaviorContext): number {
+    return behavior?.rewardFactor ?? 1;
+  }
+
+  protected clampProbability(value: number): number {
+    return Math.min(0.95, Math.max(0.05, value));
+  }
+
+  abstract predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean;
 }
 
 // random agent who makes random decisions
@@ -39,8 +68,8 @@ export class RandomAgent extends BaseAgent {
     super(id, name, AgentType.BUILT_IN, random);
   }
 
-  predict(_history: number[], _capacity: number): boolean {
-    return this.random.randBool();
+  predict(_history: number[], _capacity: number, behavior?: AgentBehaviorContext): boolean {
+    return this.random.random() < this.getUtilityGoBias(behavior);
   }
 }
 
@@ -61,20 +90,21 @@ export class ThresholdAgent extends BaseAgent {
     this.goProbability = goProbability;
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
     if (history.length === 0) {
-      return this.random.randBool();
+      return this.random.random() < this.getUtilityGoBias(behavior);
     }
 
     const avg = history.reduce((sum, val) => sum + val, 0) / history.length;
-    const normalizedAvg = avg / capacity;
+    const effectiveCapacity = this.getEffectiveCapacity(capacity, behavior);
+    const normalizedAvg = avg / effectiveCapacity;
+    const utilityPrior = this.getUtilityGoBias(behavior);
+    const adjustedGoProbability = this.clampProbability((this.goProbability * 0.75) + (utilityPrior * 0.25));
 
     if (normalizedAvg < this.threshold) {
-      // below threshold - higher go
-      return this.random.random() < this.goProbability;
+      return this.random.random() < adjustedGoProbability;
     } else {
-      // above threshold - higher no go
-      return this.random.random() < (1 - this.goProbability);
+      return this.random.random() < (1 - adjustedGoProbability);
     }
   }
 }
@@ -96,14 +126,14 @@ export class MovingAverageAgent extends BaseAgent {
     this.threshold = threshold;
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
     if (history.length === 0) {
-      return this.random.randBool();
+      return this.random.random() < this.getUtilityGoBias(behavior);
     }
 
     const window = history.slice(-this.windowSize);
     const avg = window.reduce((sum, val) => sum + val, 0) / window.length;
-    const normalizedAvg = avg / capacity;
+    const normalizedAvg = avg / this.getEffectiveCapacity(capacity, behavior);
 
     return normalizedAvg < this.threshold;
   }
@@ -130,20 +160,21 @@ export class AdaptiveAgent extends BaseAgent {
     this.currentThreshold = initialThreshold;
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
     if (history.length === 0) {
-      return this.random.randBool();
+      return this.random.random() < this.getUtilityGoBias(behavior);
     }
 
+    const effectiveCapacity = this.getEffectiveCapacity(capacity, behavior);
     const avg = history.reduce((sum, val) => sum + val, 0) / history.length;
-    const normalizedAvg = avg / capacity;
+    const normalizedAvg = avg / effectiveCapacity;
 
     // Adapt threshold based on last decision's outcome
     if (this.lastDecision !== null && history.length > 1) {
       const lastAttendance = history[history.length - 1]!;
       const wasGoodDecision = this.lastDecision
-        ? lastAttendance <= capacity
-        : lastAttendance > capacity;
+        ? lastAttendance <= effectiveCapacity
+        : lastAttendance > effectiveCapacity;
 
       if (wasGoodDecision) {
         // keep threshold if good decision
@@ -151,16 +182,16 @@ export class AdaptiveAgent extends BaseAgent {
       } else {
         // adjust threshold if bad decision
         if (this.lastDecision) {
-          // increase if stuffed
+          const penaltyStep = this.adaptationRate * this.getCautionFactor(behavior);
           this.currentThreshold = Math.min(
             1.0,
-            this.currentThreshold + this.adaptationRate
+            this.currentThreshold + penaltyStep
           );
         } else {
-          // decrease if much space
+          const rewardStep = this.adaptationRate * this.getRewardFactor(behavior);
           this.currentThreshold = Math.max(
             0.0,
-            this.currentThreshold - this.adaptationRate
+            this.currentThreshold - rewardStep
           );
         }
       }
@@ -192,14 +223,14 @@ export class ContrarianAgent extends BaseAgent {
     this.lookback = Math.max(1, lookback);
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
     if (history.length === 0) {
-      return this.random.randBool();
+      return this.random.random() < this.getUtilityGoBias(behavior);
     }
 
     const recent = history.slice(-this.lookback);
     const avg = recent.reduce((sum, val) => sum + val, 0) / recent.length;
-    return avg >= capacity;
+    return avg >= this.getEffectiveCapacity(capacity, behavior);
   }
 }
 
@@ -218,9 +249,9 @@ export class TrendFollowerAgent extends BaseAgent {
     this.windowSize = Math.max(2, windowSize);
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
     if (history.length < 2) {
-      return this.random.randBool();
+      return this.random.random() < this.getUtilityGoBias(behavior);
     }
 
     const window = history.slice(-this.windowSize);
@@ -233,7 +264,7 @@ export class TrendFollowerAgent extends BaseAgent {
 
     const predicted = window[window.length - 1]! + avgTrend;
 
-    return predicted < capacity;
+    return predicted < this.getEffectiveCapacity(capacity, behavior);
   }
 }
 
@@ -255,12 +286,15 @@ export class LoyalAgent extends BaseAgent {
     this.offRounds = Math.max(1, offRounds);
   }
 
-  predict(_history: number[], _capacity: number): boolean {
-    const cycleLength = this.onRounds + this.offRounds;
+  predict(_history: number[], _capacity: number, behavior?: AgentBehaviorContext): boolean {
+    const utilityGoBias = this.getUtilityGoBias(behavior);
+    const effectiveOnRounds = Math.max(1, Math.round(this.onRounds * (0.75 + utilityGoBias)));
+    const effectiveOffRounds = Math.max(1, Math.round(this.offRounds * (1.75 - utilityGoBias)));
+    const cycleLength = effectiveOnRounds + effectiveOffRounds;
     const positionInCycle = this.roundCounter % cycleLength;
     this.roundCounter++;
 
-    return positionInCycle < this.onRounds;
+    return positionInCycle < effectiveOnRounds;
   }
 
   reset(): void {
@@ -286,27 +320,31 @@ export class RegretMinimizingAgent extends BaseAgent {
     this.learningRate = learningRate;
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, behavior?: AgentBehaviorContext): boolean {
+    const effectiveCapacity = this.getEffectiveCapacity(capacity, behavior);
+    const cautionWeight = this.learningRate * this.getCautionFactor(behavior);
+    const rewardWeight = this.learningRate * this.getRewardFactor(behavior);
+
     // update regrets
     if (this.lastDecision !== null && history.length > 0) {
       const lastAttendance = history[history.length - 1]!;
-      const wasCrowded = lastAttendance > capacity;
+      const wasCrowded = lastAttendance > effectiveCapacity;
 
       if (this.lastDecision && wasCrowded) {
-
-        this.goRegret += this.learningRate;
+        this.goRegret += cautionWeight;
       } else if (!this.lastDecision && !wasCrowded) {
-        this.stayRegret += this.learningRate;
+        this.stayRegret += rewardWeight;
       }
     }
-    // no data -- random
+
     const totalRegret = this.goRegret + this.stayRegret;
     let goProbability: number;
 
     if (totalRegret === 0) {
-      goProbability = 0.5;
+      goProbability = this.getUtilityGoBias(behavior);
     } else {
-      goProbability = this.stayRegret / totalRegret;
+      const priorWeight = this.learningRate;
+      goProbability = (this.stayRegret + (this.getUtilityGoBias(behavior) * priorWeight)) / (totalRegret + priorWeight);
     }
 
     const decision = this.random.random() < goProbability;
@@ -334,7 +372,7 @@ export class HumanAgent extends BaseAgent {
     super(id, name, AgentType.HUMAN);
   }
 
-  predict(_history: number[], _capacity: number): boolean {
+  predict(_history: number[], _capacity: number, _behavior?: AgentBehaviorContext): boolean {
     if (this.pendingDecision === null) {
       throw new Error('Human agent decision not set');
     }
@@ -369,7 +407,7 @@ export class CustomAgent extends BaseAgent {
     this.executor = executor;
   }
 
-  predict(history: number[], capacity: number): boolean {
+  predict(history: number[], capacity: number, _behavior?: AgentBehaviorContext): boolean {
     return this.executor(history, capacity);
   }
 

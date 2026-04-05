@@ -28,6 +28,28 @@ const baseline = recentWindow.length > 0 ? helpers.average(recentWindow) : capac
 const decision = baseline < capacity;
 `;
 
+export const CUSTOM_AGENT_EXAMPLE = `// Example custom agent:
+// 1. Look at the last 6 rounds.
+// 2. Estimate the recent average attendance.
+// 3. Avoid going if the bar is already trending upward too quickly.
+
+const recent = history.slice(-6);
+
+if (recent.length === 0) {
+  // Early rounds: optimistic start.
+  decision = true;
+} else {
+  const averageAttendance = helpers.average(recent);
+  const previousAverage = helpers.average(recent.slice(0, -1));
+  const localTrend = recent.length > 1 ? averageAttendance - previousAverage : 0;
+
+  const safeCapacity = capacity * 0.92;
+  const maxAllowedTrend = capacity * 0.05;
+
+  decision = averageAttendance < safeCapacity && localTrend < maxAllowedTrend;
+}
+`;
+
 export const BUILT_IN_AGENT_ORDER: BuiltInAgentType[] = [
   BuiltInAgentType.RANDOM,
   BuiltInAgentType.THRESHOLD,

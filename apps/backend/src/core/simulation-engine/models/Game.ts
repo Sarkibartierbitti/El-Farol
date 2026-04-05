@@ -5,7 +5,7 @@ import {
   AgentDecision,
   HistoricalData
 } from '@el-farol/shared';
-import { BaseAgent } from './Agent';
+import { BaseAgent, type AgentBehaviorContext } from './Agent';
 import { v4 as uuidv4 } from 'uuid';
 
 //game model - manages game state and round execution
@@ -175,6 +175,33 @@ export class Game {
     };
   }
 
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  private getAgentBehaviorContext(): AgentBehaviorContext {
+    const positiveMultiplier = Math.max(0, this.config.benefitRules?.positiveMultiplier ?? 1);
+    const negativeMultiplier = Math.max(0, this.config.benefitRules?.negativeMultiplier ?? 1);
+    const positiveSafe = Math.max(positiveMultiplier, 0.001);
+    const negativeSafe = Math.max(negativeMultiplier, 0.001);
+    const utilityRatioLog = Math.log(negativeSafe / positiveSafe);
+    const cautionShift = Math.tanh(utilityRatioLog);
+    const effectiveCapacity = this.clamp(
+      this.config.capacity * (1 - (0.2 * cautionShift)),
+      1,
+      this.config.numAgents,
+    );
+
+    return {
+      positiveMultiplier,
+      negativeMultiplier,
+      effectiveCapacity,
+      utilityGoBias: this.clamp(positiveSafe / (positiveSafe + negativeSafe), 0.1, 0.9),
+      cautionFactor: this.clamp(Math.sqrt(negativeSafe / positiveSafe), 0.5, 2),
+      rewardFactor: this.clamp(Math.sqrt(positiveSafe / negativeSafe), 0.5, 2),
+    };
+  }
+
   //check benefit for one round
   private calculateBenefit(attendance: number): number {
     const rules = this.config.benefitRules;
@@ -210,13 +237,14 @@ export class Game {
     this.currentRound++;
     const roundId = uuidv4();
     const history = this.attendanceHistory;
+    const behaviorContext = this.getAgentBehaviorContext();
 
     // collect agent decisions
     const decisions: AgentDecision[] = [];
     let attendance = 0;
 
     for (const agent of this.agents) {
-      const decision = agent.predict(history, this.config.capacity);
+      const decision = agent.predict(history, this.config.capacity, behaviorContext);
       if (decision) {
         attendance++;
       }
@@ -291,4 +319,3 @@ export class Game {
     };
   }
 }
-
