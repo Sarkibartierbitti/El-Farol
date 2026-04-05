@@ -147,6 +147,7 @@ export class SimulationEngine {
       benefitHistory: game.getBenefitHistory(),
       capacity: game.getConfig().capacity,
       numAgents: game.getConfig().numAgents,
+      benefitRules: game.getConfig().benefitRules,
     });
   }
 
@@ -160,4 +161,3 @@ export class SimulationEngine {
     return Array.from(this.games.values());
   }
 }
-

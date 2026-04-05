@@ -1,4 +1,4 @@
-import type { GameStats } from '@el-farol/shared';
+import type { BenefitRules, GameStats } from '@el-farol/shared';
 
 //inputs needed
 export interface StatsInput {
@@ -7,11 +7,19 @@ export interface StatsInput {
   benefitHistory: number[];
   capacity: number;
   numAgents: number;
+  benefitRules?: BenefitRules;
 }
 
 
 export function calculateStats(input: StatsInput): GameStats {
-  const { gameId, attendanceHistory, benefitHistory, capacity, numAgents } = input;
+  const {
+    gameId,
+    attendanceHistory,
+    benefitHistory,
+    capacity,
+    numAgents,
+    benefitRules,
+  } = input;
   const totalRounds = attendanceHistory.length;
 
   if (totalRounds === 0) {
@@ -43,9 +51,12 @@ export function calculateStats(input: StatsInput): GameStats {
   }, 0) / totalRounds;
   const stdDev = Math.sqrt(variance);
 
+  const positiveMultiplier = benefitRules?.positiveMultiplier ?? 1;
+  const negativeMultiplier = benefitRules?.negativeMultiplier ?? 1;
+
   // optimal/min benefit for efficiency calculation
-  const optimalBenefit = capacity * totalRounds;
-  const minBenefit = -numAgents * totalRounds;
+  const optimalBenefit = capacity * totalRounds * positiveMultiplier;
+  const minBenefit = -numAgents * totalRounds * negativeMultiplier;
 
   // efficiency: (actual - min) / (max - min)
   const efficiency = optimalBenefit !== minBenefit

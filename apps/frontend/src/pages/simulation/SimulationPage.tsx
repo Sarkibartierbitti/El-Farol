@@ -50,17 +50,17 @@ function StatsGrid({ stats }: { stats: GameStats }) {
         <StatCard
           label="меньше cap"
           value={`${stats.roundsWithinCapacity}`}
-          sub={`of ${stats.totalRounds} rounds`}
+          sub={`из ${stats.totalRounds} раундов`}
         />
         <StatCard
           label="больше cap"
           value={`${stats.roundsOverCapacity}`}
-          sub={`of ${stats.totalRounds} rounds`}
+          sub={`из ${stats.totalRounds} раундов`}
         />
         <StatCard
           label="Итоговая Полезность"
           value={stats.totalBenefit.toFixed(0)}
-          sub={`avg ${stats.averageBenefit.toFixed(1)} / round`}
+          sub={`среднее ${stats.averageBenefit.toFixed(1)} / раунд`}
         />
       </div>
     );

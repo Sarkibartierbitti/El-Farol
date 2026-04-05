@@ -112,6 +112,7 @@ export class SimulationEngine {
             benefitHistory: game.getBenefitHistory(),
             capacity: game.getConfig().capacity,
             numAgents: game.getConfig().numAgents,
+            benefitRules: game.getConfig().benefitRules,
         });
     }
     deleteGame(gameId) {

@@ -61,6 +61,7 @@ analyticsRouter.get('/games/:gameId/stats', async (c: Context) => {
       benefitHistory,
       capacity,
       numAgents: dbGame.totalAgents,
+      benefitRules: dbGame.benefitRules as BenefitRules | undefined,
     });
 
     return c.json(stats);

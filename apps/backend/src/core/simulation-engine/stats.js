@@ -1,5 +1,5 @@
 export function calculateStats(input) {
-    const { gameId, attendanceHistory, benefitHistory, capacity, numAgents } = input;
+    const { gameId, attendanceHistory, benefitHistory, capacity, numAgents, benefitRules } = input;
     const totalRounds = attendanceHistory.length;
     if (totalRounds === 0) {
         return {
@@ -27,9 +27,11 @@ export function calculateStats(input) {
         return sum + diff * diff;
     }, 0) / totalRounds;
     const stdDev = Math.sqrt(variance);
+    const positiveMultiplier = benefitRules?.positiveMultiplier ?? 1;
+    const negativeMultiplier = benefitRules?.negativeMultiplier ?? 1;
     // optimal/min benefit for efficiency calculation
-    const optimalBenefit = capacity * totalRounds;
-    const minBenefit = -numAgents * totalRounds;
+    const optimalBenefit = capacity * totalRounds * positiveMultiplier;
+    const minBenefit = -numAgents * totalRounds * negativeMultiplier;
     // efficiency: (actual - min) / (max - min)
     const efficiency = optimalBenefit !== minBenefit
         ? (totalBenefit - minBenefit) / (optimalBenefit - minBenefit)

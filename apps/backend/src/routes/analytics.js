@@ -45,6 +45,7 @@ analyticsRouter.get('/games/:gameId/stats', async (c) => {
             benefitHistory,
             capacity,
             numAgents: dbGame.totalAgents,
+            benefitRules: dbGame.benefitRules,
         });
         return c.json(stats);
     }
