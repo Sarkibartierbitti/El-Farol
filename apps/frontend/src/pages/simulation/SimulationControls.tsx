@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Input, Select } from '../../components/ui';
 import type { AgentBatchEntry, SimulationFormValues } from '../../types';
 import { BuiltInAgentType, CUSTOM_AGENT_TYPE } from '../../types';
@@ -46,6 +46,24 @@ const defaultForm: SimulationFormValues = {
   negativeMultiplier: 1,
 };
 
+type SimulationFormInputValues = {
+  name: string;
+  numAgents: string;
+  capacityPercent: string;
+  numRounds: string;
+  positiveMultiplier: string;
+  negativeMultiplier: string;
+};
+
+const defaultFormInputs: SimulationFormInputValues = {
+  name: defaultForm.name,
+  numAgents: String(defaultForm.numAgents),
+  capacityPercent: String(defaultForm.capacityPercent),
+  numRounds: String(defaultForm.numRounds),
+  positiveMultiplier: String(defaultForm.positiveMultiplier),
+  negativeMultiplier: String(defaultForm.negativeMultiplier),
+};
+
 const defaultAgents: AgentBatchEntry[] = [
   {
     type: BuiltInAgentType.THRESHOLD,
@@ -72,10 +90,6 @@ const defaultAgents: AgentBatchEntry[] = [
 function clampParameterValue(field: AgentParameterField, raw: string): number {
   const cleaned = raw.replace(/[^\d.]/g, '');
 
-  if (cleaned === '' || cleaned === '.') {
-    return field.defaultValue;
-  }
-
   const parsed = Number(cleaned);
   if (Number.isNaN(parsed)) {
     return field.defaultValue;
@@ -87,6 +101,47 @@ function clampParameterValue(field: AgentParameterField, raw: string): number {
   return field.integer ? Math.round(capped) : Number(capped.toFixed(4));
 }
 
+function sanitizeIntegerInput(raw: string): string {
+  return raw.replace(/\D/g, '');
+}
+
+function sanitizeDecimalInput(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, '');
+  const firstDot = cleaned.indexOf('.');
+  if (firstDot === -1) {
+    return cleaned;
+  }
+  return `${cleaned.slice(0, firstDot + 1)}${cleaned.slice(firstDot + 1).replace(/\./g, '')}`;
+}
+
+function parseIntegerInput(raw: string, min: number, max: number): number | null {
+  const cleaned = sanitizeIntegerInput(raw);
+  if (!cleaned) {
+    return null;
+  }
+
+  const parsed = Number(cleaned);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return Math.max(min, Math.min(parsed, max));
+}
+
+function parseDecimalInput(raw: string, min: number): number | null {
+  const cleaned = sanitizeDecimalInput(raw);
+  if (cleaned === '' || cleaned === '.') {
+    return null;
+  }
+
+  const parsed = Number(cleaned);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return Math.max(min, parsed);
+}
+
 function AgentSettingsModal({
   entry,
   disabled,
@@ -96,9 +151,51 @@ function AgentSettingsModal({
   onNameChange,
 }: AgentSettingsModalProps) {
   const builtInPreset = isBuiltInAgentType(entry.type) ? getBuiltInPreset(entry.type) : null;
+  const [draftParameters, setDraftParameters] = useState<Record<string, string>>({});
+  const [closeError, setCloseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!builtInPreset) {
+      setDraftParameters({});
+      return;
+    }
+
+    const nextDrafts = Object.fromEntries(
+      builtInPreset.parameters.map((field) => [
+        field.key,
+        String(entry.parameters?.[field.key] ?? field.defaultValue),
+      ]),
+    );
+
+    setDraftParameters(nextDrafts);
+  }, [builtInPreset, entry.type]);
+
+  function tryClose() {
+    const hasInvalidBuiltInField =
+      builtInPreset?.parameters.some((field) => {
+        const raw = draftParameters[field.key] ?? '';
+        if (raw.trim() === '') {
+          return true;
+        }
+        const parsed = field.integer
+          ? parseIntegerInput(raw, field.min, field.max ?? Number.MAX_SAFE_INTEGER)
+          : parseDecimalInput(raw, field.min);
+        return parsed === null;
+      }) ?? false;
+    const hasEmptyCustomField =
+      !builtInPreset && ((entry.name ?? '').trim() === '' || (entry.customCode ?? '').trim() === '');
+
+    if (hasInvalidBuiltInField || hasEmptyCustomField) {
+      setCloseError('Заполните все поля, чтобы закрыть окно настроек.');
+      return;
+    }
+
+    setCloseError(null);
+    onClose();
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={tryClose}>
       <div
         className="w-full max-w-xl border border-black-200 bg-white p-5 shadow-lg"
         onClick={(event) => event.stopPropagation()}
@@ -112,7 +209,7 @@ function AgentSettingsModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={tryClose}
             className="text-sm text-black-500 hover:text-black-900"
             aria-label="Закрыть настройки агента"
           >
@@ -135,11 +232,29 @@ function AgentSettingsModal({
                     label={field.label}
                     type="text"
                     inputMode={field.integer ? 'numeric' : 'decimal'}
-                    value={String(entry.parameters?.[field.key] ?? field.defaultValue)}
+                    value={draftParameters[field.key] ?? String(entry.parameters?.[field.key] ?? field.defaultValue)}
                     hint={`${field.description} default = ${field.defaultValue}`}
-                    onChange={(event) =>
-                      onParameterChange(field.key, clampParameterValue(field, event.target.value), field)
-                    }
+                    onChange={(event) => {
+                      const raw = field.integer
+                        ? sanitizeIntegerInput(event.target.value)
+                        : sanitizeDecimalInput(event.target.value);
+                      setDraftParameters((current) => ({ ...current, [field.key]: raw }));
+
+                      const cleaned = field.integer ? sanitizeIntegerInput(raw) : sanitizeDecimalInput(raw);
+                      if (cleaned === '' || cleaned === '.') {
+                        setCloseError(null);
+                        return;
+                      }
+
+                      const parsed = Number(cleaned);
+                      if (Number.isNaN(parsed)) {
+                        setCloseError(null);
+                        return;
+                      }
+
+                      setCloseError(null);
+                      onParameterChange(field.key, clampParameterValue(field, raw), field);
+                    }}
                     disabled={disabled}
                   />
                 ))}
@@ -151,7 +266,7 @@ function AgentSettingsModal({
             )}
 
             <div className="flex justify-end">
-              <Button type="button" variant="secondary" onClick={onClose}>
+              <Button type="button" variant="secondary" onClick={tryClose}>
                 Готово
               </Button>
             </div>
@@ -161,7 +276,10 @@ function AgentSettingsModal({
             <Input
               label="Название"
               value={entry.name ?? 'Custom Agent'}
-              onChange={(event) => onNameChange(event.target.value)}
+              onChange={(event) => {
+                setCloseError(null);
+                onNameChange(event.target.value);
+              }}
               disabled={disabled}
               hint="Будет использовано как префикс имени при создании нескольких агентов."
             />
@@ -179,7 +297,10 @@ function AgentSettingsModal({
               <label className="text-xs font-medium uppercase text-black">Код агента</label>
               <textarea
                 value={entry.customCode ?? CUSTOM_AGENT_TEMPLATE}
-                onChange={(event) => onCustomCodeChange(event.target.value)}
+                onChange={(event) => {
+                  setCloseError(null);
+                  onCustomCodeChange(event.target.value);
+                }}
                 disabled={disabled}
                 rows={12}
                 spellCheck={false}
@@ -191,36 +312,46 @@ function AgentSettingsModal({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => onCustomCodeChange(CUSTOM_AGENT_EXAMPLE)}
+                onClick={() => {
+                  setCloseError(null);
+                  onCustomCodeChange(CUSTOM_AGENT_EXAMPLE);
+                }}
                 disabled={disabled}
               >
                 Вставить пример
               </Button>
-              <Button type="button" variant="secondary" onClick={onClose}>
+              <Button type="button" variant="secondary" onClick={tryClose}>
                 Готово
               </Button>
             </div>
           </div>
         )}
+
+        {closeError && <p className="mt-3 text-xs text-amber-600">{closeError}</p>}
       </div>
     </div>
   );
 }
 
 export function SimulationControls({ status, onRun, onReset }: SimulationControlsProps) {
-  const [form, setForm] = useState<SimulationFormValues>(defaultForm);
+  const [formInputs, setFormInputs] = useState<SimulationFormInputValues>(defaultFormInputs);
   const [agents, setAgents] = useState<AgentBatchEntry[]>(defaultAgents);
+  const [agentCountInputs, setAgentCountInputs] = useState<string[]>(defaultAgents.map((entry) => String(entry.count)));
   const [activeSettingsIndex, setActiveSettingsIndex] = useState<number | null>(null);
 
   const isRunning = status === 'creating' || status === 'simulating';
   const isDone = status === 'done' || status === 'error';
 
-  function setField<K extends keyof SimulationFormValues>(key: K, value: SimulationFormValues[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
+  function setFormInput<K extends keyof SimulationFormInputValues>(key: K, value: SimulationFormInputValues[K]) {
+    setFormInputs((current) => ({ ...current, [key]: value }));
   }
 
   function setAgentCount(index: number, count: number) {
     setAgents((current) => current.map((entry, i) => (i === index ? { ...entry, count } : entry)));
+  }
+
+  function setAgentCountInput(index: number, value: string) {
+    setAgentCountInputs((current) => current.map((item, i) => (i === index ? value : item)));
   }
 
   function setAgentType(index: number, type: AgentBatchEntry['type']) {
@@ -275,10 +406,12 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
         parameters: getDefaultParameters(BuiltInAgentType.RANDOM),
       },
     ]);
+    setAgentCountInputs((current) => [...current, '10']);
   }
 
   function removeAgentRow(index: number) {
     setAgents((current) => current.filter((_, i) => i !== index));
+    setAgentCountInputs((current) => current.filter((_, i) => i !== index));
     setActiveSettingsIndex((current) => {
       if (current === null) {
         return null;
@@ -290,51 +423,62 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
     });
   }
 
-  const totalAgents = agents.reduce((sum, agent) => sum + agent.count, 0);
-  const agentMismatch = totalAgents !== form.numAgents;
+  const parsedNumAgents = parseIntegerInput(formInputs.numAgents, 2, 1000);
+  const parsedCapacityPercent = parseIntegerInput(formInputs.capacityPercent, 1, 99);
+  const parsedNumRounds = parseIntegerInput(formInputs.numRounds, 1, 1000);
+  const parsedPositiveMultiplier = parseDecimalInput(formInputs.positiveMultiplier, 0);
+  const parsedNegativeMultiplier = parseDecimalInput(formInputs.negativeMultiplier, 0);
+
+  const parsedAgentCounts = agentCountInputs.map((raw) => parseIntegerInput(raw, 0, parsedNumAgents ?? 1000));
+  const totalAgents = parsedAgentCounts.reduce((sum, count) => sum + (count ?? 0), 0);
+
+  const hasEmptyFormInput = Object.values(formInputs).some((value) => value.trim() === '');
+  const hasEmptyAgentCountInput = agentCountInputs.some((value) => value.trim() === '');
+  const hasInvalidNumericInput =
+    parsedNumAgents === null ||
+    parsedCapacityPercent === null ||
+    parsedNumRounds === null ||
+    parsedPositiveMultiplier === null ||
+    parsedNegativeMultiplier === null ||
+    parsedAgentCounts.some((count) => count === null);
+
+  const hasEmptyInputs = hasEmptyFormInput || hasEmptyAgentCountInput;
+  const agentMismatch = !hasEmptyInputs && !hasInvalidNumericInput && parsedNumAgents !== null && totalAgents !== parsedNumAgents;
   const invalidCustomAgent = agents.some(
     (entry) => entry.type === CUSTOM_AGENT_TYPE && !(entry.customCode ?? '').trim(),
   );
   const activeEntry = activeSettingsIndex !== null ? agents[activeSettingsIndex] : null;
-  const canSubmit = !isRunning && !agentMismatch && !invalidCustomAgent;
+  const canSubmit = !isRunning && !hasEmptyInputs && !hasInvalidNumericInput && !agentMismatch && !invalidCustomAgent;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) {
+    if (
+      !canSubmit ||
+      parsedNumAgents === null ||
+      parsedCapacityPercent === null ||
+      parsedNumRounds === null ||
+      parsedPositiveMultiplier === null ||
+      parsedNegativeMultiplier === null
+    ) {
       return;
     }
-    onRun(form, agents);
-  }
 
-  function handleNumericChange(
-    key: keyof SimulationFormValues,
-    raw: string,
-    min: number,
-    max: number,
-  ) {
-    const digits = raw.replace(/\D/g, '');
-    if (digits === '') {
-      setField(key, min as SimulationFormValues[typeof key]);
-      return;
-    }
-    const num = Math.max(min, Math.min(Number(digits), max));
-    setField(key, num as SimulationFormValues[typeof key]);
-  }
+    const normalizedAgents = agents.map((entry, index) => ({
+      ...entry,
+      count: parsedAgentCounts[index] ?? 0,
+    }));
 
-  function handleDecimalChange(
-    key: keyof SimulationFormValues,
-    raw: string,
-    min: number,
-  ) {
-    const cleaned = raw.replace(/[^\d.]/g, '');
-    if (cleaned === '' || cleaned === '.') {
-      setField(key, min as SimulationFormValues[typeof key]);
-      return;
-    }
-    const num = Math.max(min, parseFloat(cleaned));
-    if (!Number.isNaN(num)) {
-      setField(key, num as SimulationFormValues[typeof key]);
-    }
+    onRun(
+      {
+        name: formInputs.name,
+        numAgents: parsedNumAgents,
+        capacityPercent: parsedCapacityPercent,
+        numRounds: parsedNumRounds,
+        positiveMultiplier: parsedPositiveMultiplier,
+        negativeMultiplier: parsedNegativeMultiplier,
+      },
+      normalizedAgents,
+    );
   }
 
   return (
@@ -345,32 +489,32 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
           <div className="flex flex-col gap-5">
             <Input
               label="Name"
-              value={form.name}
-              onChange={(event) => setField('name', event.target.value)}
+              value={formInputs.name}
+              onChange={(event) => setFormInput('name', event.target.value)}
               disabled={isRunning}
             />
             <Input
               label="Количество агентов"
               type="text"
               inputMode="numeric"
-              value={String(form.numAgents)}
-              onChange={(event) => handleNumericChange('numAgents', event.target.value, 2, 1000)}
+              value={formInputs.numAgents}
+              onChange={(event) => setFormInput('numAgents', sanitizeIntegerInput(event.target.value))}
               disabled={isRunning}
             />
             <Input
               label="Capacity (%) от общего количества агентов"
               type="text"
               inputMode="numeric"
-              value={String(form.capacityPercent)}
-              onChange={(event) => handleNumericChange('capacityPercent', event.target.value, 1, 99)}
+              value={formInputs.capacityPercent}
+              onChange={(event) => setFormInput('capacityPercent', sanitizeIntegerInput(event.target.value))}
               disabled={isRunning}
             />
             <Input
               label="Раунды"
               type="text"
               inputMode="numeric"
-              value={String(form.numRounds)}
-              onChange={(event) => handleNumericChange('numRounds', event.target.value, 1, 1000)}
+              value={formInputs.numRounds}
+              onChange={(event) => setFormInput('numRounds', sanitizeIntegerInput(event.target.value))}
               disabled={isRunning}
             />
           </div>
@@ -386,16 +530,16 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
               label="+ мульт"
               type="text"
               inputMode="decimal"
-              value={String(form.positiveMultiplier)}
-              onChange={(event) => handleDecimalChange('positiveMultiplier', event.target.value, 0)}
+              value={formInputs.positiveMultiplier}
+              onChange={(event) => setFormInput('positiveMultiplier', sanitizeDecimalInput(event.target.value))}
               disabled={isRunning}
             />
             <Input
               label="− мульт"
               type="text"
               inputMode="decimal"
-              value={String(form.negativeMultiplier)}
-              onChange={(event) => handleDecimalChange('negativeMultiplier', event.target.value, 0)}
+              value={formInputs.negativeMultiplier}
+              onChange={(event) => setFormInput('negativeMultiplier', sanitizeDecimalInput(event.target.value))}
               disabled={isRunning}
             />
           </div>
@@ -430,15 +574,20 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
                   type="text"
                   inputMode="numeric"
                   min={0}
-                  max={form.numAgents}
-                  value={String(entry.count)}
+                  max={parsedNumAgents ?? 1000}
+                  value={agentCountInputs[index] ?? ''}
                   onChange={(event) => {
-                    const raw = event.target.value.replace(/\D/g, '');
+                    const raw = sanitizeIntegerInput(event.target.value);
+                    setAgentCountInput(index, raw);
+
                     if (raw === '') {
-                      setAgentCount(index, 0);
                       return;
                     }
-                    setAgentCount(index, Math.min(Number(raw), form.numAgents));
+
+                    const parsed = parseIntegerInput(raw, 0, parsedNumAgents ?? 1000);
+                    if (parsed !== null) {
+                      setAgentCount(index, parsed);
+                    }
                   }}
                   disabled={isRunning}
                   className="min-w-0 w-12 shrink-0 rounded-md text-center border-2 border-black-300"
@@ -467,7 +616,12 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
 
           {agentMismatch && (
             <p className="mt-2 text-xs text-amber-600">
-              всего агентов: <strong>{totalAgents}</strong> (ожидается {form.numAgents})
+              всего агентов: <strong>{totalAgents}</strong> (ожидается {parsedNumAgents})
+            </p>
+          )}
+          {hasEmptyInputs && (
+            <p className="mt-2 text-xs text-amber-600">
+              Заполните все поля ввода перед запуском симуляции.
             </p>
           )}
           {invalidCustomAgent && (
@@ -501,6 +655,7 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
 
       {activeEntry && activeSettingsIndex !== null && (
         <AgentSettingsModal
+          key={`${activeSettingsIndex}-${activeEntry.type}`}
           entry={activeEntry}
           disabled={isRunning}
           onClose={() => setActiveSettingsIndex(null)}
