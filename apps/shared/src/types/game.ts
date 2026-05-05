@@ -17,6 +17,36 @@ export interface BenefitRules {
   customFormula?: (attendance: number, capacity: number) => number;
 }
 
+export type PopulationArrivalDistribution = 'poisson' | 'uniform' | 'exponential' | 'gamma';
+export type PopulationDepartureDistribution = PopulationArrivalDistribution | 'binomial';
+
+export interface PopulationArrivalConfig {
+  distribution: PopulationArrivalDistribution;
+  mean?: number;
+  min?: number;
+  max?: number;
+  shape?: number;
+}
+
+export interface PopulationDepartureConfig {
+  distribution: PopulationDepartureDistribution;
+  mean?: number;
+  min?: number;
+  max?: number;
+  shape?: number;
+  probability?: number;
+}
+
+export interface PopulationDynamicsConfig {
+  enabled: boolean;
+  initialActiveAgents: number;
+  minActiveAgents?: number;
+  maxActiveAgents?: number;
+  utilitySensitivity?: number;
+  arrivals: PopulationArrivalConfig;
+  departures: PopulationDepartureConfig;
+}
+
 
 export interface GameConfig {
   capacity: number;
@@ -25,6 +55,7 @@ export interface GameConfig {
 
   //benefit calculation rules
   benefitRules?: BenefitRules;
+  populationDynamics?: PopulationDynamicsConfig;
 
   allowHumanPlayers?: boolean;
 
@@ -62,6 +93,7 @@ export interface GameState {
   totalBenefit: number;
   averageAttendance: number;
   agentCount: number;
+  activeAgentCount: number;
   lastRoundAttendance?: number;
   lastRoundBenefit?: number;
 }
@@ -75,12 +107,20 @@ export interface GameStats {
   averageAttendance: number;
   attendanceVariance: number;
   attendanceStdDev: number;
+  averageActivePopulation: number;
+  activePopulationVariance: number;
+  activePopulationStdDev: number;
   optimalBenefit: number; // max possible benefit
   efficiency: number; // (actual benefit - min benefit) / (max benefit - min benefit)
   attendanceHistory: number[];
   benefitHistory: number[];
+  activePopulationHistory: number[];
   roundsWithinCapacity: number;
   roundsOverCapacity: number;
+  totalArrivals: number;
+  totalDepartures: number;
+  averageBenefitPerActiveAgent: number;
+  averageParticipationRate: number;
 }
 
 //game insights/recommendations
@@ -99,4 +139,3 @@ export interface GameInsights {
   recommendations: string[];
   optimalCapacity?: number; // what capacity should be for optimal performance with current agents
 }
-

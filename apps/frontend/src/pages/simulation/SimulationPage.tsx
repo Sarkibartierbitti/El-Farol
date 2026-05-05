@@ -1,7 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-  import {
+import {
     LineChart,
+    ComposedChart,
     Line,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -29,9 +31,10 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   
 function StatsGrid({ stats }: { stats: GameStats }) {
   const efficiencyPct = (stats.efficiency * 100).toFixed(1);
+  const participationPct = (stats.averageParticipationRate * 100).toFixed(1);
   
   return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="Эффективность"
           value={`${efficiencyPct}%`}
@@ -48,6 +51,11 @@ function StatsGrid({ stats }: { stats: GameStats }) {
           sub=""
         />
         <StatCard
+          label="Активных в среднем"
+          value={stats.averageActivePopulation.toFixed(1)}
+          sub={`σ ${stats.activePopulationStdDev.toFixed(2)}`}
+        />
+        <StatCard
           label="меньше cap"
           value={`${stats.roundsWithinCapacity}`}
           sub={`из ${stats.totalRounds} раундов`}
@@ -61,6 +69,21 @@ function StatsGrid({ stats }: { stats: GameStats }) {
           label="Итоговая Полезность"
           value={stats.totalBenefit.toFixed(0)}
           sub={`среднее ${stats.averageBenefit.toFixed(1)} / раунд`}
+        />
+        <StatCard
+          label="Приходы / уходы"
+          value={`${stats.totalArrivals} / ${stats.totalDepartures}`}
+          sub="за всю симуляцию"
+        />
+        <StatCard
+          label="Полезность на активного"
+          value={stats.averageBenefitPerActiveAgent.toFixed(2)}
+          sub="среднее по active-agent-round"
+        />
+        <StatCard
+          label="Доля участия"
+          value={`${participationPct}%`}
+          sub="посещения от активной популяции"
         />
       </div>
     );
@@ -194,6 +217,49 @@ export function SimulationPage() {
                       strokeWidth={1.5}
                     />
                   </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {showChart && (
+              <div className="bg-white border border-black-200 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-black-900">Активная популяция и потоки</h2>
+                </div>
+                <ResponsiveContainer width="100%" height={360}>
+                  <ComposedChart data={sim.chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                    <CartesianGrid />
+                    <XAxis
+                      dataKey="round"
+                      tick={{ fontSize: 11 }}
+                      label={{ value: 'Раунд', position: 'insideBottom', offset: -4 }}
+                    />
+                    <YAxis
+                      yAxisId="population"
+                      tick={{ fontSize: 11 }}
+                      domain={[0, sim.numAgents ?? 0]}
+                      label={{ value: 'Активные', angle: -90, position: 'insideLeft' }}
+                    />
+                    <YAxis
+                      yAxisId="flow"
+                      orientation="right"
+                      tick={{ fontSize: 11 }}
+                      allowDecimals={false}
+                      label={{ value: 'Поток', angle: 90, position: 'insideRight' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar yAxisId="flow" dataKey="arrivals" name="Пришли" fill="#f4bb73" />
+                    <Bar yAxisId="flow" dataKey="departures" name="Ушли" fill="#d97706" />
+                    <Line
+                      yAxisId="population"
+                      type="monotone"
+                      dataKey="activeAgentsEnd"
+                      name="Активные к раунду"
+                      stroke="#2f7d5c"
+                      dot={false}
+                      strokeWidth={1.8}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}

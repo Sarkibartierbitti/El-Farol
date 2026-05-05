@@ -47,8 +47,12 @@ analyticsRouter.get('/games/:gameId/stats', async (c) => {
             gameId,
             attendanceHistory,
             benefitHistory,
+            activePopulationHistory: dbGame.rounds.map(r => r.activeAgentsEnd),
+            arrivalsHistory: dbGame.rounds.map(r => r.arrivals),
+            departuresHistory: dbGame.rounds.map(r => r.departures),
             capacity,
             numAgents: dbGame.totalAgents,
+            benefitRules: dbGame.benefitRules,
         });
         return c.json(stats);
     }
@@ -75,6 +79,9 @@ analyticsRouter.get('/games/:gameId/history', async (c) => {
                 attendance,
                 benefit: benefitHistory[offset + idx] ?? 0,
                 capacity,
+                activeAgents: game.getActivePopulationHistory()[offset + idx] ?? game.getConfig().numAgents,
+                arrivals: game.getArrivalsHistory()[offset + idx] ?? 0,
+                departures: game.getDeparturesHistory()[offset + idx] ?? 0,
                 wasOvercrowded: attendance > capacity,
             }));
             return c.json({
@@ -104,6 +111,9 @@ analyticsRouter.get('/games/:gameId/history', async (c) => {
             attendance: r.attendance,
             benefit: r.wasOvercrowded ? -r.attendance : r.attendance * r.attendeeBenefit,
             capacity: r.capacity,
+            activeAgents: r.activeAgentsEnd,
+            arrivals: r.arrivals,
+            departures: r.departures,
             wasOvercrowded: r.wasOvercrowded,
             executedAt: r.executedAt,
         }));

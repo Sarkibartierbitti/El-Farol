@@ -10,11 +10,38 @@ export interface BenefitRules {
     negativeMultiplier?: number;
     customFormula?: (attendance: number, capacity: number) => number;
 }
+export type PopulationArrivalDistribution = 'poisson' | 'uniform' | 'exponential' | 'gamma';
+export type PopulationDepartureDistribution = PopulationArrivalDistribution | 'binomial';
+export interface PopulationArrivalConfig {
+    distribution: PopulationArrivalDistribution;
+    mean?: number;
+    min?: number;
+    max?: number;
+    shape?: number;
+}
+export interface PopulationDepartureConfig {
+    distribution: PopulationDepartureDistribution;
+    mean?: number;
+    min?: number;
+    max?: number;
+    shape?: number;
+    probability?: number;
+}
+export interface PopulationDynamicsConfig {
+    enabled: boolean;
+    initialActiveAgents: number;
+    minActiveAgents?: number;
+    maxActiveAgents?: number;
+    utilitySensitivity?: number;
+    arrivals: PopulationArrivalConfig;
+    departures: PopulationDepartureConfig;
+}
 export interface GameConfig {
     capacity: number;
     numAgents: number;
     numRounds?: number | null;
     benefitRules?: BenefitRules;
+    populationDynamics?: PopulationDynamicsConfig;
     allowHumanPlayers?: boolean;
     maxHistoryInMemory?: number;
 }
@@ -43,6 +70,7 @@ export interface GameState {
     totalBenefit: number;
     averageAttendance: number;
     agentCount: number;
+    activeAgentCount: number;
     lastRoundAttendance?: number;
     lastRoundBenefit?: number;
 }
@@ -54,12 +82,20 @@ export interface GameStats {
     averageAttendance: number;
     attendanceVariance: number;
     attendanceStdDev: number;
+    averageActivePopulation: number;
+    activePopulationVariance: number;
+    activePopulationStdDev: number;
     optimalBenefit: number;
     efficiency: number;
     attendanceHistory: number[];
     benefitHistory: number[];
+    activePopulationHistory: number[];
     roundsWithinCapacity: number;
     roundsOverCapacity: number;
+    totalArrivals: number;
+    totalDepartures: number;
+    averageBenefitPerActiveAgent: number;
+    averageParticipationRate: number;
 }
 export interface GameInsights {
     gameId: string;

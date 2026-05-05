@@ -12,6 +12,12 @@ import {
   isBuiltInAgentType,
   type AgentParameterField,
 } from '../../agentCatalog';
+import {
+  defaultPopulationDynamicsConfig,
+  describePopulationDynamics,
+  normalizePopulationDynamicsConfig,
+  PopulationDynamicsModal,
+} from './PopulationDynamicsModal';
 
 interface SimulationControlsProps {
   status: SimStatus;
@@ -44,6 +50,7 @@ const defaultForm: SimulationFormValues = {
   numRounds: 100,
   positiveMultiplier: 1,
   negativeMultiplier: 1,
+  populationDynamics: { ...defaultPopulationDynamicsConfig },
 };
 
 type SimulationFormInputValues = {
@@ -213,7 +220,7 @@ function AgentSettingsModal({
             className="text-sm text-black-500 hover:text-black-900"
             aria-label="Закрыть настройки агента"
           >
-            close
+            закрыть
           </button>
         </div>
 
@@ -335,9 +342,11 @@ function AgentSettingsModal({
 
 export function SimulationControls({ status, onRun, onReset }: SimulationControlsProps) {
   const [formInputs, setFormInputs] = useState<SimulationFormInputValues>(defaultFormInputs);
+  const [populationDynamics, setPopulationDynamics] = useState(defaultForm.populationDynamics);
   const [agents, setAgents] = useState<AgentBatchEntry[]>(defaultAgents);
   const [agentCountInputs, setAgentCountInputs] = useState<string[]>(defaultAgents.map((entry) => String(entry.count)));
   const [activeSettingsIndex, setActiveSettingsIndex] = useState<number | null>(null);
+  const [isPopulationModalOpen, setIsPopulationModalOpen] = useState(false);
 
   const isRunning = status === 'creating' || status === 'simulating';
   const isDone = status === 'done' || status === 'error';
@@ -430,7 +439,11 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
   const parsedNegativeMultiplier = parseDecimalInput(formInputs.negativeMultiplier, 0);
 
   const parsedAgentCounts = agentCountInputs.map((raw) => parseIntegerInput(raw, 0, parsedNumAgents ?? 1000));
-  const totalAgents = parsedAgentCounts.reduce((sum, count) => sum + (count ?? 0), 0);
+  const totalAgents = parsedAgentCounts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
+  const normalizedPopulationDynamics = normalizePopulationDynamicsConfig(
+    populationDynamics,
+    parsedNumAgents ?? defaultForm.numAgents,
+  );
 
   const hasEmptyFormInput = Object.values(formInputs).some((value) => value.trim() === '');
   const hasEmptyAgentCountInput = agentCountInputs.some((value) => value.trim() === '');
@@ -476,6 +489,7 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
         numRounds: parsedNumRounds,
         positiveMultiplier: parsedPositiveMultiplier,
         negativeMultiplier: parsedNegativeMultiplier,
+        populationDynamics: normalizedPopulationDynamics,
       },
       normalizedAgents,
     );
@@ -488,7 +502,7 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
           <h3 className="mb-3 break-words text-xs font-bold">Настройки симуляции</h3>
           <div className="flex flex-col gap-5">
             <Input
-              label="Name"
+              label="Название"
               value={formInputs.name}
               onChange={(event) => setFormInput('name', event.target.value)}
               disabled={isRunning}
@@ -517,6 +531,23 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
               onChange={(event) => setFormInput('numRounds', sanitizeIntegerInput(event.target.value))}
               disabled={isRunning}
             />
+            <div className="rounded-md border border-black-100 bg-[#faf6ef] p-3 text-sm text-black-700">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-black-900">Динамика популяции</p>
+                  <p className="mt-1">{describePopulationDynamics(normalizedPopulationDynamics)}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsPopulationModalOpen(true)}
+                  disabled={isRunning}
+                >
+                  Настроить
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -668,6 +699,16 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
           }}
           onCustomCodeChange={(code) => setCustomAgentCode(activeSettingsIndex, code)}
           onNameChange={(name) => setCustomAgentName(activeSettingsIndex, name)}
+        />
+      )}
+
+      {isPopulationModalOpen && (
+        <PopulationDynamicsModal
+          value={normalizedPopulationDynamics}
+          totalAgents={parsedNumAgents ?? defaultForm.numAgents}
+          disabled={isRunning}
+          onClose={() => setIsPopulationModalOpen(false)}
+          onSave={(nextConfig) => setPopulationDynamics(nextConfig)}
         />
       )}
     </>

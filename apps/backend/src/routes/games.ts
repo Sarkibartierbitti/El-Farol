@@ -5,7 +5,7 @@ import { HTTPException } from 'hono/http-exception';
 import { prisma } from '../core/db/prisma';
 import { GameStatus as PrismaGameStatus, Game as PrismaGame } from '@prisma/client';
 import { SimulationEngine, AgentFactory, Game } from '../core/simulation-engine';
-import { GameStatus, GameConfig, BenefitRules } from '@el-farol/shared';
+import { GameStatus, GameConfig, BenefitRules, PopulationDynamicsConfig } from '@el-farol/shared';
 import type { CreateGameRequest, AgentConfig } from '@el-farol/shared';
 
 const gamesRouter = new Hono();
@@ -56,6 +56,7 @@ function dbGameToResponse(dbGame: PrismaGameWithCount): GameResponse {
       numAgents: dbGame.totalAgents,
       numRounds: dbGame.totalRounds,
       benefitRules: dbGame.benefitRules as BenefitRules | undefined,
+      populationDynamics: dbGame.populationDynamics as unknown as PopulationDynamicsConfig | undefined,
     },
     currentRound: dbGame.currentRound,
     agentCount: dbGame._count.agents,
@@ -94,7 +95,7 @@ gamesRouter.post('/', async (c: Context) => {
     }
 
     const { name, description, config, createdBy } = body;
-    const { capacity, numAgents, numRounds, benefitRules } = config;
+    const { capacity, numAgents, numRounds, benefitRules, populationDynamics } = config;
 
     if (!capacity || capacity <= 0) {
       throw new HTTPException(400, { message: 'capacity must be a positive number' });
@@ -126,6 +127,7 @@ gamesRouter.post('/', async (c: Context) => {
         capacityPercent,
         totalAgents: numAgents,
         benefitRules: (benefitRules ?? { positiveMultiplier: 1, negativeMultiplier: 1 }) as object,
+        populationDynamics: populationDynamics as object | undefined,
         status: PrismaGameStatus.DRAFT,
       },
     });
@@ -228,6 +230,7 @@ gamesRouter.get('/:id', async (c: Context) => {
         numAgents: dbGame.totalAgents,
         numRounds: dbGame.totalRounds,
         benefitRules: dbGame.benefitRules,
+        populationDynamics: dbGame.populationDynamics as unknown as PopulationDynamicsConfig | undefined,
       },
       currentRound: dbGame.currentRound,
       agents: dbGame.agents.map(ga => ({
@@ -344,6 +347,10 @@ gamesRouter.post('/:id/rounds', async (c: Context) => {
           roundNumber: roundResult.roundNumber,
           attendance: roundResult.attendance,
           capacity: roundResult.capacity,
+          activeAgentsStart: roundResult.activeAgentsStart,
+          activeAgentsEnd: roundResult.activeAgentsEnd,
+          arrivals: roundResult.arrivals,
+          departures: roundResult.departures,
           wasOvercrowded,
           attendeeBenefit: roundResult.totalBenefit / roundResult.attendance || 0,
           stayerBenefit: 0,
@@ -406,6 +413,10 @@ gamesRouter.post('/:id/simulate', async (c: Context) => {
             roundNumber: round.roundNumber,
             attendance: round.attendance,
             capacity: round.capacity,
+            activeAgentsStart: round.activeAgentsStart,
+            activeAgentsEnd: round.activeAgentsEnd,
+            arrivals: round.arrivals,
+            departures: round.departures,
             wasOvercrowded,
             attendeeBenefit: round.attendance > 0 ? round.totalBenefit / round.attendance : 0,
             stayerBenefit: 0,
@@ -433,6 +444,10 @@ gamesRouter.post('/:id/simulate', async (c: Context) => {
         roundNumber: r.roundNumber,
         attendance: r.attendance,
         totalBenefit: r.totalBenefit,
+        activeAgentsStart: r.activeAgentsStart,
+        activeAgentsEnd: r.activeAgentsEnd,
+        arrivals: r.arrivals,
+        departures: r.departures,
       })),
     });
   } catch (error) {

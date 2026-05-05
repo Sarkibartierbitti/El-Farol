@@ -71,6 +71,10 @@ export function useSimulation() {
           round: r.roundNumber,
           attendance: r.attendance,
           benefit: r.totalBenefit,
+          activeAgentsStart: r.activeAgentsStart,
+          activeAgentsEnd: r.activeAgentsEnd,
+          arrivals: r.arrivals,
+          departures: r.departures,
         }));
 
         setState({

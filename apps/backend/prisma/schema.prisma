@@ -56,6 +56,7 @@ model Game {
 
   //benefit
   benefitRules Json @map("benefit_rules")
+  populationDynamics Json? @map("population_dynamics")
 
   // State
   status GameStatus @default(DRAFT)
@@ -121,6 +122,10 @@ model Round {
   // Results
   attendance      Int
   capacity        Int
+  activeAgentsStart Int      @default(0) @map("active_agents_start")
+  activeAgentsEnd Int        @default(0) @map("active_agents_end")
+  arrivals Int              @default(0)
+  departures Int            @default(0)
   wasOvercrowded  Boolean     @map("was_overcrowded")
   attendeeBenefit Float       @map("attendee_benefit")
   stayerBenefit   Float       @map("stayer_benefit")

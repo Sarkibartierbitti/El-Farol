@@ -21,6 +21,9 @@ export function createGame(values: SimulationFormValues): Promise<GameResponse> 
           positiveMultiplier: values.positiveMultiplier,
           negativeMultiplier: values.negativeMultiplier,
         },
+        populationDynamics: values.populationDynamics.enabled
+          ? values.populationDynamics
+          : undefined,
       },
     }),
   });

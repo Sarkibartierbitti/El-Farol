@@ -21,17 +21,48 @@ export enum BuiltInAgentType {
   export type CustomAgentType = typeof CUSTOM_AGENT_TYPE;
   export type SimulationAgentType = BuiltInAgentType | CustomAgentType;
   
-  export interface BenefitRules {
-    positiveMultiplier?: number;
-    negativeMultiplier?: number;
-  }
+export interface BenefitRules {
+  positiveMultiplier?: number;
+  negativeMultiplier?: number;
+}
+
+export type PopulationArrivalDistribution = 'poisson' | 'uniform' | 'exponential' | 'gamma';
+export type PopulationDepartureDistribution = PopulationArrivalDistribution | 'binomial';
+
+export interface PopulationArrivalConfig {
+  distribution: PopulationArrivalDistribution;
+  mean?: number;
+  min?: number;
+  max?: number;
+  shape?: number;
+}
+
+export interface PopulationDepartureConfig {
+  distribution: PopulationDepartureDistribution;
+  mean?: number;
+  min?: number;
+  max?: number;
+  shape?: number;
+  probability?: number;
+}
+
+export interface PopulationDynamicsConfig {
+  enabled: boolean;
+  initialActiveAgents: number;
+  minActiveAgents: number;
+  maxActiveAgents: number;
+  utilitySensitivity: number;
+  arrivals: PopulationArrivalConfig;
+  departures: PopulationDepartureConfig;
+}
   
-  export interface GameConfig {
-    capacity: number;
-    numAgents: number;
-    numRounds?: number | null;
-    benefitRules?: BenefitRules;
-  }
+export interface GameConfig {
+  capacity: number;
+  numAgents: number;
+  numRounds?: number | null;
+  benefitRules?: BenefitRules;
+  populationDynamics?: PopulationDynamicsConfig;
+}
   
   export interface GameResponse {
     id: string;
@@ -53,22 +84,34 @@ export enum BuiltInAgentType {
     totalRounds: number;
     totalBenefit: number;
     averageBenefit: number;
-    averageAttendance: number;
-    attendanceVariance: number;
-    attendanceStdDev: number;
-    optimalBenefit: number;
-    efficiency: number;
-    attendanceHistory: number[];
-    benefitHistory: number[];
-    roundsWithinCapacity: number;
-    roundsOverCapacity: number;
-  }
+  averageAttendance: number;
+  attendanceVariance: number;
+  attendanceStdDev: number;
+  averageActivePopulation: number;
+  activePopulationVariance: number;
+  activePopulationStdDev: number;
+  optimalBenefit: number;
+  efficiency: number;
+  attendanceHistory: number[];
+  benefitHistory: number[];
+  activePopulationHistory: number[];
+  roundsWithinCapacity: number;
+  roundsOverCapacity: number;
+  totalArrivals: number;
+  totalDepartures: number;
+  averageBenefitPerActiveAgent: number;
+  averageParticipationRate: number;
+}
   
-  export interface RoundSummary {
-    roundNumber: number;
-    attendance: number;
-    totalBenefit: number;
-  }
+export interface RoundSummary {
+  roundNumber: number;
+  attendance: number;
+  totalBenefit: number;
+  activeAgentsStart: number;
+  activeAgentsEnd: number;
+  arrivals: number;
+  departures: number;
+}
   
   export interface SimulationResult {
     gameId: string;
@@ -94,14 +137,15 @@ export enum BuiltInAgentType {
 
   export type AgentConfig = BuiltInAgentConfig | CustomAgentConfig;
   
-  export interface SimulationFormValues {
-    name: string;
-    numAgents: number;
-    capacityPercent: number;
-    numRounds: number;
-    positiveMultiplier: number;
-    negativeMultiplier: number;
-  }
+export interface SimulationFormValues {
+  name: string;
+  numAgents: number;
+  capacityPercent: number;
+  numRounds: number;
+  positiveMultiplier: number;
+  negativeMultiplier: number;
+  populationDynamics: PopulationDynamicsConfig;
+}
   
   export interface AgentBatchEntry {
     type: SimulationAgentType;
@@ -111,9 +155,13 @@ export enum BuiltInAgentType {
     name?: string;
   }
   
-  export interface ChartPoint {
-    round: number;
-    attendance: number;
-    benefit: number;
-  }
+export interface ChartPoint {
+  round: number;
+  attendance: number;
+  benefit: number;
+  activeAgentsStart: number;
+  activeAgentsEnd: number;
+  arrivals: number;
+  departures: number;
+}
   

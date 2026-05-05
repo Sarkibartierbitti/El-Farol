@@ -124,8 +124,12 @@ class SimulationEngine {
             gameId: game.getId(),
             attendanceHistory: game.getAttendanceHistory(),
             benefitHistory: game.getBenefitHistory(),
+            activePopulationHistory: game.getActivePopulationHistory(),
+            arrivalsHistory: game.getArrivalsHistory(),
+            departuresHistory: game.getDeparturesHistory(),
             capacity: game.getConfig().capacity,
             numAgents: game.getConfig().numAgents,
+            benefitRules: game.getConfig().benefitRules,
         });
     }
     deleteGame(gameId) {

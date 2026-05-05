@@ -15,6 +15,10 @@ export interface RoundResult {
   attendance: number; 
   capacity: number;
   totalBenefit: number; 
+  activeAgentsStart: number;
+  activeAgentsEnd: number;
+  arrivals: number;
+  departures: number;
   agentDecisions: AgentDecision[];
   timestamp: Date;
 }
@@ -33,6 +37,7 @@ export interface RoundMetadata {
 export interface HistoricalData {
   attendanceHistory: number[]; // array with rounds' attendance
   benefitHistory: number[];
+  activePopulationHistory?: number[];
   currentRound: number; // 1-indexed
   capacity: number;
   numAgents: number;
@@ -61,4 +66,3 @@ export interface SimulationResult {
   finalStats: GameStats;
   duration: number; // time in ms
 }
-

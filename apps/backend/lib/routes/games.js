@@ -37,6 +37,7 @@ function dbGameToResponse(dbGame) {
             numAgents: dbGame.totalAgents,
             numRounds: dbGame.totalRounds,
             benefitRules: dbGame.benefitRules,
+            populationDynamics: dbGame.populationDynamics,
         },
         currentRound: dbGame.currentRound,
         agentCount: dbGame._count.agents,
@@ -70,7 +71,7 @@ gamesRouter.post('/', async (c) => {
             throw new http_exception_1.HTTPException(400, { message: 'Name and config are required' });
         }
         const { name, description, config, createdBy } = body;
-        const { capacity, numAgents, numRounds, benefitRules } = config;
+        const { capacity, numAgents, numRounds, benefitRules, populationDynamics } = config;
         if (!capacity || capacity <= 0) {
             throw new http_exception_1.HTTPException(400, { message: 'capacity must be a positive number' });
         }
@@ -99,6 +100,7 @@ gamesRouter.post('/', async (c) => {
                 capacityPercent,
                 totalAgents: numAgents,
                 benefitRules: (benefitRules ?? { positiveMultiplier: 1, negativeMultiplier: 1 }),
+                populationDynamics: populationDynamics,
                 status: client_1.GameStatus.DRAFT,
             },
         });
@@ -191,6 +193,7 @@ gamesRouter.get('/:id', async (c) => {
                 numAgents: dbGame.totalAgents,
                 numRounds: dbGame.totalRounds,
                 benefitRules: dbGame.benefitRules,
+                populationDynamics: dbGame.populationDynamics,
             },
             currentRound: dbGame.currentRound,
             agents: dbGame.agents.map(ga => ({
@@ -298,6 +301,10 @@ gamesRouter.post('/:id/rounds', async (c) => {
                     roundNumber: roundResult.roundNumber,
                     attendance: roundResult.attendance,
                     capacity: roundResult.capacity,
+                    activeAgentsStart: roundResult.activeAgentsStart,
+                    activeAgentsEnd: roundResult.activeAgentsEnd,
+                    arrivals: roundResult.arrivals,
+                    departures: roundResult.departures,
                     wasOvercrowded,
                     attendeeBenefit: roundResult.totalBenefit / roundResult.attendance || 0,
                     stayerBenefit: 0,
@@ -355,6 +362,10 @@ gamesRouter.post('/:id/simulate', async (c) => {
                         roundNumber: round.roundNumber,
                         attendance: round.attendance,
                         capacity: round.capacity,
+                        activeAgentsStart: round.activeAgentsStart,
+                        activeAgentsEnd: round.activeAgentsEnd,
+                        arrivals: round.arrivals,
+                        departures: round.departures,
                         wasOvercrowded,
                         attendeeBenefit: round.attendance > 0 ? round.totalBenefit / round.attendance : 0,
                         stayerBenefit: 0,
@@ -380,6 +391,10 @@ gamesRouter.post('/:id/simulate', async (c) => {
                 roundNumber: r.roundNumber,
                 attendance: r.attendance,
                 totalBenefit: r.totalBenefit,
+                activeAgentsStart: r.activeAgentsStart,
+                activeAgentsEnd: r.activeAgentsEnd,
+                arrivals: r.arrivals,
+                departures: r.departures,
             })),
         });
     }

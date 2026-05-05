@@ -12,6 +12,10 @@ export interface RoundResult {
     attendance: number;
     capacity: number;
     totalBenefit: number;
+    activeAgentsStart: number;
+    activeAgentsEnd: number;
+    arrivals: number;
+    departures: number;
     agentDecisions: AgentDecision[];
     timestamp: Date;
 }
@@ -26,6 +30,7 @@ export interface RoundMetadata {
 export interface HistoricalData {
     attendanceHistory: number[];
     benefitHistory: number[];
+    activePopulationHistory?: number[];
     currentRound: number;
     capacity: number;
     numAgents: number;
