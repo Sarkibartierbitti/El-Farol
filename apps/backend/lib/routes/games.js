@@ -86,6 +86,7 @@ gamesRouter.post('/', async (c) => {
                 numAgents,
                 numRounds: numRounds ?? 100,
                 benefitRules,
+                populationDynamics,
             },
             createdBy,
         });
