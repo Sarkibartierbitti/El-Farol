@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import {
   CartesianGrid,
-  ComposedChart,
   Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Area,
 } from 'recharts';
 import type {
   PopulationArrivalConfig,
@@ -107,9 +106,11 @@ function flowMoments(
 interface PreviewPoint {
   round: number;
   arrivalMean: number;
-  arrivalBand: [number, number];
+  arrivalLow: number;
+  arrivalHigh: number;
   departureMean: number;
-  departureBand: [number, number];
+  departureLow: number;
+  departureHigh: number;
 }
 
 function buildSeries(
@@ -127,9 +128,11 @@ function buildSeries(
     points.push({
       round,
       arrivalMean: a.mean,
-      arrivalBand: [Math.max(0, a.mean - a.stdDev), a.mean + a.stdDev],
+      arrivalLow: Math.max(0, a.mean - a.stdDev),
+      arrivalHigh: a.mean + a.stdDev,
       departureMean: d.mean,
-      departureBand: [Math.max(0, d.mean - d.stdDev), d.mean + d.stdDev],
+      departureLow: Math.max(0, d.mean - d.stdDev),
+      departureHigh: d.mean + d.stdDev,
     });
   }
   return points;
@@ -146,11 +149,14 @@ export function FlowPreviewChart({
     [arrivals, departures, numRounds, activeAgents],
   );
 
+  const ARRIVAL_COLOR = '#f4bb73';
+  const DEPARTURE_COLOR = '#9871f7';
+
   return (
     <div className="border border-black-100 bg-white p-3">
       <p className="mb-2 text-xs font-bold uppercase text-black-500">Ожидаемые потоки по раундам</p>
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+        <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid />
           <XAxis
             dataKey="round"
@@ -163,47 +169,65 @@ export function FlowPreviewChart({
             allowDecimals={false}
           />
           <Tooltip
-            formatter={(value: number) => value.toFixed(2)}
+            formatter={(value: number | string) => (typeof value === 'number' ? value.toFixed(2) : value)}
             labelFormatter={(label) => `Раунд ${label}`}
           />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Area
+          <Line
             type="monotone"
-            dataKey="arrivalBand"
-            stroke="none"
-            fill="#9871f7"
-            fillOpacity={0.15}
-            name="Приход ±σ"
-            isAnimationActive={false}
-          />
-          <Area
-            type="monotone"
-            dataKey="departureBand"
-            stroke="none"
-            fill="#888888"
-            fillOpacity={0.15}
-            name="Уход ±σ"
+            dataKey="arrivalLow"
+            stroke={ARRIVAL_COLOR}
+            dot={false}
+            strokeWidth={1}
+            name="Приход −σ"
             isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="arrivalMean"
-            stroke="#9871f7"
+            stroke={ARRIVAL_COLOR}
             dot={false}
-            strokeWidth={1.5}
+            strokeWidth={2.25}
             name="Приход (среднее)"
             isAnimationActive={false}
           />
           <Line
             type="monotone"
-            dataKey="departureMean"
-            stroke="#444444"
+            dataKey="arrivalHigh"
+            stroke={ARRIVAL_COLOR}
             dot={false}
-            strokeWidth={1.5}
+            strokeWidth={1}
+            name="Приход +σ"
+            isAnimationActive={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="departureLow"
+            stroke={DEPARTURE_COLOR}
+            dot={false}
+            strokeWidth={1}
+            name="Уход −σ"
+            isAnimationActive={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="departureMean"
+            stroke={DEPARTURE_COLOR}
+            dot={false}
+            strokeWidth={2.25}
             name="Уход (среднее)"
             isAnimationActive={false}
           />
-        </ComposedChart>
+          <Line
+            type="monotone"
+            dataKey="departureHigh"
+            stroke={DEPARTURE_COLOR}
+            dot={false}
+            strokeWidth={1}
+            name="Уход +σ"
+            isAnimationActive={false}
+          />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
