@@ -6,11 +6,14 @@ import type {
   PopulationDepartureConfig,
   PopulationDepartureDistribution,
   PopulationDynamicsConfig,
+  PopulationFlowSchedule,
 } from '../../types';
+import { FlowPreviewChart } from './FlowPreviewChart';
 
 interface PopulationDynamicsModalProps {
   value: PopulationDynamicsConfig;
   totalAgents: number;
+  numRounds: number;
   disabled: boolean;
   onClose: () => void;
   onSave: (config: PopulationDynamicsConfig) => void;
@@ -27,12 +30,20 @@ type PopulationDraftState = {
   arrivalMin: string;
   arrivalMax: string;
   arrivalShape: string;
+  arrivalStartRound: string;
+  arrivalEndRound: string;
+  arrivalFadeIn: string;
+  arrivalFadeOut: string;
   departureDistribution: PopulationDepartureDistribution;
   departureMean: string;
   departureMin: string;
   departureMax: string;
   departureShape: string;
   departureProbability: string;
+  departureStartRound: string;
+  departureEndRound: string;
+  departureFadeIn: string;
+  departureFadeOut: string;
 };
 
 const arrivalOptions = [
@@ -87,6 +98,14 @@ function parseDecimal(raw: string, min: number, max?: number): number | null {
   return max === undefined ? bounded : Math.min(bounded, max);
 }
 
+function scheduleField(schedule: PopulationFlowSchedule | undefined, key: keyof PopulationFlowSchedule): string {
+  const raw = schedule?.[key];
+  if (raw == null) {
+    return '';
+  }
+  return String(raw);
+}
+
 function createDraft(value: PopulationDynamicsConfig): PopulationDraftState {
   return {
     enabled: value.enabled,
@@ -99,13 +118,59 @@ function createDraft(value: PopulationDynamicsConfig): PopulationDraftState {
     arrivalMin: String(value.arrivals.min ?? 0),
     arrivalMax: String(value.arrivals.max ?? 0),
     arrivalShape: String(value.arrivals.shape ?? 2),
+    arrivalStartRound: scheduleField(value.arrivals.schedule, 'startRound'),
+    arrivalEndRound: scheduleField(value.arrivals.schedule, 'endRound'),
+    arrivalFadeIn: scheduleField(value.arrivals.schedule, 'fadeInRounds'),
+    arrivalFadeOut: scheduleField(value.arrivals.schedule, 'fadeOutRounds'),
     departureDistribution: value.departures.distribution,
     departureMean: String(value.departures.mean ?? 0),
     departureMin: String(value.departures.min ?? 0),
     departureMax: String(value.departures.max ?? 0),
     departureShape: String(value.departures.shape ?? 2),
     departureProbability: String(value.departures.probability ?? 0),
+    departureStartRound: scheduleField(value.departures.schedule, 'startRound'),
+    departureEndRound: scheduleField(value.departures.schedule, 'endRound'),
+    departureFadeIn: scheduleField(value.departures.schedule, 'fadeInRounds'),
+    departureFadeOut: scheduleField(value.departures.schedule, 'fadeOutRounds'),
   };
+}
+
+function buildScheduleFromDraft(
+  startRaw: string,
+  endRaw: string,
+  fadeInRaw: string,
+  fadeOutRaw: string,
+): PopulationFlowSchedule | undefined {
+  const startRound = parseInteger(startRaw, 1, 1_000_000);
+  const endRound = parseInteger(endRaw, 1, 1_000_000);
+  const fadeInRounds = parseInteger(fadeInRaw, 0, 1_000_000);
+  const fadeOutRounds = parseInteger(fadeOutRaw, 0, 1_000_000);
+
+  const hasAny =
+    startRound !== null ||
+    endRound !== null ||
+    (fadeInRounds !== null && fadeInRounds > 0) ||
+    (fadeOutRounds !== null && fadeOutRounds > 0);
+
+  if (!hasAny) {
+    return undefined;
+  }
+
+  const schedule: PopulationFlowSchedule = {};
+  if (startRound !== null) schedule.startRound = startRound;
+  if (endRound !== null) schedule.endRound = endRound;
+  if (fadeInRounds !== null) schedule.fadeInRounds = fadeInRounds;
+  if (fadeOutRounds !== null) schedule.fadeOutRounds = fadeOutRounds;
+  return schedule;
+}
+
+function normalizeScheduleForPreview(
+  startRaw: string,
+  endRaw: string,
+  fadeInRaw: string,
+  fadeOutRaw: string,
+): PopulationFlowSchedule | undefined {
+  return buildScheduleFromDraft(startRaw, endRaw, fadeInRaw, fadeOutRaw);
 }
 
 export function normalizePopulationDynamicsConfig(
@@ -126,6 +191,7 @@ export function normalizePopulationDynamicsConfig(
     min: Math.max(0, Math.floor(value.arrivals.min ?? 0)),
     max: Math.max(0, Math.floor(value.arrivals.max ?? 0)),
     shape: Math.max(0.1, value.arrivals.shape ?? 2),
+    schedule: value.arrivals.schedule,
   };
 
   const departures: PopulationDepartureConfig = {
@@ -135,6 +201,7 @@ export function normalizePopulationDynamicsConfig(
     max: Math.max(0, Math.floor(value.departures.max ?? 0)),
     shape: Math.max(0.1, value.departures.shape ?? 2),
     probability: Math.max(0, Math.min(value.departures.probability ?? 0, 1)),
+    schedule: value.departures.schedule,
   };
 
   return {
@@ -196,6 +263,7 @@ export function describePopulationDynamics(config: PopulationDynamicsConfig): st
 export function PopulationDynamicsModal({
   value,
   totalAgents,
+  numRounds,
   disabled,
   onClose,
   onSave,
@@ -238,6 +306,12 @@ export function PopulationDynamicsModal({
           min: parseInteger(draft.arrivalMin, 0, totalAgents) ?? value.arrivals.min,
           max: parseInteger(draft.arrivalMax, 0, totalAgents) ?? value.arrivals.max,
           shape: parseDecimal(draft.arrivalShape, 0.1) ?? value.arrivals.shape,
+          schedule: normalizeScheduleForPreview(
+            draft.arrivalStartRound,
+            draft.arrivalEndRound,
+            draft.arrivalFadeIn,
+            draft.arrivalFadeOut,
+          ),
         },
         departures: {
           distribution: draft.departureDistribution,
@@ -246,6 +320,12 @@ export function PopulationDynamicsModal({
           max: parseInteger(draft.departureMax, 0, totalAgents) ?? value.departures.max,
           shape: parseDecimal(draft.departureShape, 0.1) ?? value.departures.shape,
           probability: parseDecimal(draft.departureProbability, 0, 1) ?? value.departures.probability,
+          schedule: normalizeScheduleForPreview(
+            draft.departureStartRound,
+            draft.departureEndRound,
+            draft.departureFadeIn,
+            draft.departureFadeOut,
+          ),
         },
       },
       totalAgents,
@@ -279,6 +359,36 @@ export function PopulationDynamicsModal({
 
     if (initialActiveAgents < minActiveAgents || initialActiveAgents > maxActiveAgents) {
       setError('Начальное число активных агентов должно лежать между минимумом и максимумом.');
+      return;
+    }
+
+    const arrivalSchedule = buildScheduleFromDraft(
+      draft.arrivalStartRound,
+      draft.arrivalEndRound,
+      draft.arrivalFadeIn,
+      draft.arrivalFadeOut,
+    );
+    const departureSchedule = buildScheduleFromDraft(
+      draft.departureStartRound,
+      draft.departureEndRound,
+      draft.departureFadeIn,
+      draft.departureFadeOut,
+    );
+
+    if (
+      arrivalSchedule?.startRound != null &&
+      arrivalSchedule.endRound != null &&
+      arrivalSchedule.endRound < arrivalSchedule.startRound
+    ) {
+      setError('Расписание прихода: конечный раунд меньше начального.');
+      return;
+    }
+    if (
+      departureSchedule?.startRound != null &&
+      departureSchedule.endRound != null &&
+      departureSchedule.endRound < departureSchedule.startRound
+    ) {
+      setError('Расписание ухода: конечный раунд меньше начального.');
       return;
     }
 
@@ -341,6 +451,13 @@ export function PopulationDynamicsModal({
       }
     }
 
+    if (arrivalSchedule) {
+      arrivalConfig.schedule = arrivalSchedule;
+    }
+    if (departureSchedule) {
+      departureConfig.schedule = departureSchedule;
+    }
+
     setError(null);
     onSave(normalizePopulationDynamicsConfig({
       enabled: draft.enabled,
@@ -360,7 +477,7 @@ export function PopulationDynamicsModal({
         role="dialog"
         aria-modal="true"
         aria-label="Настройки динамики популяции"
-        className="w-full max-w-3xl border border-black-200 bg-white p-5 shadow-lg"
+        className="w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-black-200 bg-white p-5 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -403,7 +520,8 @@ export function PopulationDynamicsModal({
           </label>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-xs font-bold uppercase text-black-500">Активная популяция</p>
@@ -495,6 +613,43 @@ export function PopulationDynamicsModal({
                   />
                 )}
               </div>
+              <p className="mt-3 mb-2 text-xs font-bold uppercase text-black-500">Расписание прихода</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Старт раунд"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.arrivalStartRound}
+                  onChange={(event) => updateDraft('arrivalStartRound', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                  hint="Пусто = с раунда 1."
+                />
+                <Input
+                  label="Конец раунд"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.arrivalEndRound}
+                  onChange={(event) => updateDraft('arrivalEndRound', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                  hint="Пусто = без конца."
+                />
+                <Input
+                  label="Fade-in раундов"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.arrivalFadeIn}
+                  onChange={(event) => updateDraft('arrivalFadeIn', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                />
+                <Input
+                  label="Fade-out раундов"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.arrivalFadeOut}
+                  onChange={(event) => updateDraft('arrivalFadeOut', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                />
+              </div>
             </div>
           </div>
 
@@ -559,13 +714,60 @@ export function PopulationDynamicsModal({
                   />
                 )}
               </div>
+              <p className="mt-3 mb-2 text-xs font-bold uppercase text-black-500">Расписание ухода</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Старт раунд"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.departureStartRound}
+                  onChange={(event) => updateDraft('departureStartRound', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                  hint="Пусто = с раунда 1."
+                />
+                <Input
+                  label="Конец раунд"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.departureEndRound}
+                  onChange={(event) => updateDraft('departureEndRound', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                  hint="Пусто = без конца."
+                />
+                <Input
+                  label="Fade-in раундов"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.departureFadeIn}
+                  onChange={(event) => updateDraft('departureFadeIn', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                />
+                <Input
+                  label="Fade-out раундов"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.departureFadeOut}
+                  onChange={(event) => updateDraft('departureFadeOut', sanitizeIntegerInput(event.target.value))}
+                  disabled={disabled}
+                />
+              </div>
             </div>
 
             <div className="border border-black-100 bg-white p-4 text-sm text-black-700">
-              <p className="font-medium text-black-900">Предпросмотр</p>
+              <p className="font-medium text-black-900">Сводка</p>
               <p className="mt-2">Активные агенты: старт {normalizedPreview.initialActiveAgents}, диапазон {normalizedPreview.minActiveAgents}-{normalizedPreview.maxActiveAgents}.</p>
               <p className="mt-2">При хорошем результате приток растет, а отток падает; при плохом результате наоборот. Сила эффекта задается параметром чувствительности.</p>
             </div>
+          </div>
+          </div>
+
+          <div className="space-y-4">
+            <FlowPreviewChart
+              arrivals={normalizedPreview.arrivals}
+              departures={normalizedPreview.departures}
+              numRounds={Math.max(1, numRounds)}
+              activeAgents={normalizedPreview.initialActiveAgents}
+            />
           </div>
         </div>
 

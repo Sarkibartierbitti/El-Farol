@@ -20,12 +20,23 @@ export interface BenefitRules {
 export type PopulationArrivalDistribution = 'poisson' | 'uniform' | 'exponential' | 'gamma';
 export type PopulationDepartureDistribution = PopulationArrivalDistribution | 'binomial';
 
+// schedule applied on top of base distribution. scale factor multiplies the
+// distribution mean/probability per round. outside [startRound..endRound] and
+// fade windows scale = 0.
+export interface PopulationFlowSchedule {
+  startRound?: number;     // 1-based inclusive. default 1.
+  endRound?: number | null;// 1-based inclusive. null/undefined = no end.
+  fadeInRounds?: number;   // rounds before startRound with linear ramp-up. default 0.
+  fadeOutRounds?: number;  // rounds after endRound with linear ramp-down. default 0.
+}
+
 export interface PopulationArrivalConfig {
   distribution: PopulationArrivalDistribution;
   mean?: number;
   min?: number;
   max?: number;
   shape?: number;
+  schedule?: PopulationFlowSchedule;
 }
 
 export interface PopulationDepartureConfig {
@@ -35,6 +46,7 @@ export interface PopulationDepartureConfig {
   max?: number;
   shape?: number;
   probability?: number;
+  schedule?: PopulationFlowSchedule;
 }
 
 export interface PopulationDynamicsConfig {

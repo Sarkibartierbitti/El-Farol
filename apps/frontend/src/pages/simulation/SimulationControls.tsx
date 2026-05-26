@@ -706,6 +706,7 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
         <PopulationDynamicsModal
           value={normalizedPopulationDynamics}
           totalAgents={parsedNumAgents ?? defaultForm.numAgents}
+          numRounds={parsedNumRounds ?? defaultForm.numRounds}
           disabled={isRunning}
           onClose={() => setIsPopulationModalOpen(false)}
           onSave={(nextConfig) => setPopulationDynamics(nextConfig)}

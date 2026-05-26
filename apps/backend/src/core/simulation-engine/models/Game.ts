@@ -7,14 +7,16 @@ import {
   PopulationArrivalConfig,
   PopulationDepartureConfig,
   PopulationDynamicsConfig,
+  PopulationFlowSchedule,
   SeededRandom,
 } from '@el-farol/shared';
+
 import { BaseAgent, type AgentBehaviorContext } from './Agent';
 import { v4 as uuidv4 } from 'uuid';
 
-// game model - manages game state and round execution
+// game model, manages game state and round execution
 export class Game {
-  private readonly id: string;
+  private readonly id: string; //constant
   private readonly name: string;
   private readonly description?: string;
   private readonly config: GameConfig;
@@ -210,6 +212,8 @@ export class Game {
     };
   }
 
+
+  //helper to get number to boundary
   private clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
   }
@@ -224,11 +228,13 @@ export class Game {
       0,
       this.config.numAgents,
     );
+
     const minActiveAgents = this.clamp(
       Math.floor(this.config.populationDynamics.minActiveAgents ?? 0),
       0,
       maxActiveAgents,
     );
+
     const initialActiveAgents = this.clamp(
       Math.floor(this.config.populationDynamics.initialActiveAgents),
       minActiveAgents,
@@ -240,6 +246,8 @@ export class Game {
       initialActiveAgents,
       minActiveAgents,
       maxActiveAgents,
+
+      //utility sensitivity, >= 0
       utilitySensitivity: Math.max(0, this.config.populationDynamics.utilitySensitivity ?? 0),
     };
   }
@@ -352,6 +360,36 @@ export class Game {
     return this.clamp(lastBenefit / reference, -1, 1);
   }
 
+  // schedule scale factor for current round. returns 1 if no schedule.
+  // fade window uses (fade + 1 - distance) / (fade + 1) ramp, so no fade round is wasted at 0.
+  private computeScheduleScale(round: number, schedule?: PopulationFlowSchedule): number {
+    if (!schedule) {
+      return 1;
+    }
+    const start = Math.max(1, Math.floor(schedule.startRound ?? 1));
+    const end = schedule.endRound != null ? Math.floor(schedule.endRound) : null;
+    const fadeIn = Math.max(0, Math.floor(schedule.fadeInRounds ?? 0));
+    const fadeOut = Math.max(0, Math.floor(schedule.fadeOutRounds ?? 0));
+
+    if (round < start) {
+      const distance = start - round;
+      if (distance > fadeIn) {
+        return 0;
+      }
+      return (fadeIn + 1 - distance) / (fadeIn + 1);
+    }
+
+    if (end != null && round > end) {
+      const distance = round - end;
+      if (distance > fadeOut) {
+        return 0;
+      }
+      return (fadeOut + 1 - distance) / (fadeOut + 1);
+    }
+
+    return 1;
+  }
+
   private samplePopulationFlow(
     config: PopulationArrivalConfig | PopulationDepartureConfig,
     limit: number,
@@ -362,33 +400,39 @@ export class Game {
       return 0;
     }
 
+    const scheduleScale = this.computeScheduleScale(this.currentRound, config.schedule);
+    if (scheduleScale <= 0) {
+      return 0;
+    }
+    const combinedFactor = utilityFactor * scheduleScale;
+
     let sampledCount = 0;
 
     switch (config.distribution) {
       case 'poisson':
-        sampledCount = this.samplePoisson((config.mean ?? 0) * utilityFactor);
+        sampledCount = this.samplePoisson((config.mean ?? 0) * combinedFactor);
         break;
       case 'uniform': {
         const min = Math.max(0, Math.floor(config.min ?? 0));
         const max = Math.max(min, Math.floor(config.max ?? limit));
-        sampledCount = Math.floor(this.random.randFloat(min, max + 1) * utilityFactor);
+        sampledCount = Math.floor(this.random.randFloat(min, max + 1) * combinedFactor);
         break;
       }
       case 'exponential': {
         const mean = Math.max(0, config.mean ?? 0);
         const sample = -Math.log(Math.max(1 - this.random.random(), 1e-12)) * mean;
-        sampledCount = Math.floor(sample * utilityFactor);
+        sampledCount = Math.floor(sample * combinedFactor);
         break;
       }
       case 'gamma': {
         const mean = Math.max(0, config.mean ?? 0);
         const shape = Math.max(0.1, config.shape ?? 2);
         const scale = mean > 0 ? mean / shape : 0;
-        sampledCount = Math.floor(this.sampleGamma(shape, scale) * utilityFactor);
+        sampledCount = Math.floor(this.sampleGamma(shape, scale) * combinedFactor);
         break;
       }
       case 'binomial': {
-        const probability = this.clamp((config.probability ?? 0) * utilityFactor, 0, 1);
+        const probability = this.clamp((config.probability ?? 0) * combinedFactor, 0, 1);
         sampledCount = this.sampleBinomial(activeAgents, probability);
         break;
       }

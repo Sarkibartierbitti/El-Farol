@@ -29,12 +29,20 @@ export interface BenefitRules {
 export type PopulationArrivalDistribution = 'poisson' | 'uniform' | 'exponential' | 'gamma';
 export type PopulationDepartureDistribution = PopulationArrivalDistribution | 'binomial';
 
+export interface PopulationFlowSchedule {
+  startRound?: number;
+  endRound?: number | null;
+  fadeInRounds?: number;
+  fadeOutRounds?: number;
+}
+
 export interface PopulationArrivalConfig {
   distribution: PopulationArrivalDistribution;
   mean?: number;
   min?: number;
   max?: number;
   shape?: number;
+  schedule?: PopulationFlowSchedule;
 }
 
 export interface PopulationDepartureConfig {
@@ -44,6 +52,7 @@ export interface PopulationDepartureConfig {
   max?: number;
   shape?: number;
   probability?: number;
+  schedule?: PopulationFlowSchedule;
 }
 
 export interface PopulationDynamicsConfig {
