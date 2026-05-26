@@ -1,321 +1,300 @@
-(see code for beautiful version)
+# El Farol Bar Problem — симулятор и песочница
 
-Overview:
-В данном проекте рассматривается задача El-farol: ситуация в которой пользователи с различными стратегиями и обладанием информацией выбирают идти им или не идти в бар (или какое-либо другое место) с потолком посещаемости. Например: есть 100 студентов ЭАДа, они думают идти им в бар в субботу или нет - при этом если в баре будет более 60 человек, то всем посетившим будет хуже, чем если бы они не шли. Раунды игры повторяются, анализируется оптимальность различных методов предсказания, общая полученная полезность относительно максимально возможной.
+> Сколько людей придёт в бар в субботу, если каждый думает о том же?
+> Узнайте, посадите против друг друга 8 готовых стратегий, напишите свою — и посмотрите,
+> кто переиграет толпу.
 
-Реализация: 
-Планируется создание telegram mini-app с бэкэндом на js & фронтендом на react + возможность интеграции бота с рассылкой для low commitment игры реальных пользователей. В приложении планируется создать "песочницу" по настройке модели (с возможностью создания кастомных агентов - путем вставления кода). Пользователь сможет выбирвать настройки бара, числа игроков, модели игроков, принимать личное участие в игре - и получать аналитику и визуализацию на основе заданных параметров. Для tg-бота планируется рассылка формата 1 раунд/день с низким коммитментом (идти/не идти) + предоставляемой информацией - игра будет вестись между пользователями бота, результаты - отображаться в приложении. 
+---
 
-Что добавлено в текущей версии:
-- На странице симуляции у каждого ряда агентов есть компактная кнопка настроек справа. Она открывает окно, где можно менять параметры конструктора конкретного типа агента: `threshold`, `windowSize`, `goProbability`, `adaptationRate`, `lookback`, `onRounds`, `offRounds`, `learningRate`.
-- Для custom agent доступно отдельное popup-окно с полем для кода. В нем есть кнопка `Вставить пример`, которая подставляет рабочий шаблон с комментариями и базовой логикой принятия решения.
-- Utility multipliers теперь влияют не только на статистику, но и на поведение агентов. Их эффект зависит от типа агента: часть стратегий сдвигает порог или вероятность входа, а обучающиеся стратегии быстрее адаптируются после плохих решений.
-- Landing page теперь описывает агентов через формулы и дефолтные параметры, чтобы совпадать с фактической реализацией симулятора.
+## 🍻 Что это
 
-##########################################################################################################################################################
-Концепт взаимодействий:
+**El Farol Bar Problem** — классическая задача теории игр Брайана Артура: 100 человек решают,
+идти ли им в бар. Если придёт **больше 60** — всем плохо (давка, очереди, минусовая полезность).
+Если меньше — пришедшие выигрывают. Решение принимается **одновременно**, без сговора, на основе
+истории посещений предыдущих раундов.
 
-┌───────────────────────────────────────────────────────────────┐
-│                        Telegram Users                         │
-│       (interact via Bot & Mini App inside Telegram)            │
-└───────────────┬───────────────────────────────┬───────────────┘
-                │                               │
-     [Telegram Bot Service]             [Mini App (React)]
-     - Sends “Go / Not go” polls         - Visualization (charts)
-     - Collects decisions                - Config sandbox
-     - Talks to Backend API              - Calls REST API
-                │                               │
-                └───────────────┬───────────────┘
-                                │
-                        [Backend API Server]
-                (Fastify / Express + PostgreSQL + Redis)
-                                │
-          ┌─────────────────────┼────────────────────┐
-          │                     │                    │
-  [Simulation Engine]     [Analytics Service]   [Database Layer]
-   - Runs El-Farol model    - Aggregates stats     - PostgreSQL
-   - Executes agents code   - Generates insights  
-   - Sandbox for user code
-┌───────────────────────────────────────────────────────────────┐
-│                        Telegram Users                         │
-│       (interact via Bot & Mini App inside Telegram)            │
-└───────────────┬───────────────────────────────┬───────────────┘
-                │                               │
-     [Telegram Bot Service]             [Mini App (React)]
-     - Sends “Go / Not go” polls         - Visualization (charts)
-     - Collects decisions                - Config sandbox
-     - Talks to Backend API              - Calls REST API
-                │                               │
-                └───────────────┬───────────────┘
-                                │
-                        [Backend API Server]
-                (Fastify / Express + PostgreSQL)
-                                │
-          ┌─────────────────────┼────────────────────┐
-          │                     │                    │
-  [Simulation Engine]     [Analytics Service]   [Database Layer]
-   - Runs El-Farol model    - Aggregates stats     - PostgreSQL
-   - Executes agents code   - Generates insights   
-   - Sandbox for user code
+Это приложение превращает задачу в живую песочницу:
 
-##########################################################################################################################################################   
-Концепт Архитектуры:
+- 🧠 **8 встроенных стратегий** — Random, Threshold, Moving Average, Adaptive, Contrarian,
+  Trend Follower, Loyal, Regret Minimizing. Каждая — отдельная гипотеза о том, как угадать толпу.
+- ✍️ **Кастомные агенты прямо в браузере** — пишете JS-функцию `decide(history, capacity)` →
+  она исполняется в sandbox, конкурирует с остальными.
+- 📈 **Графики посещаемости, полезности, активной популяции** — видно сходимость,
+  колебания, "поломку" стратегий.
+- 🌊 **Динамика популяции** — задайте расписание прихода/ухода агентов: например, "первые
+  20 раундов толпа активна, потом постепенно затухает". Распределения Пуассона, гамма,
+  биномиальное и др. + опциональные fade-in / fade-out.
+- 🤖 **Telegram-бот** для low-commitment игры реальных людей: один опрос "идти / не идти" в день,
+  результаты — в приложении.
 
-El-Farol/
-│
-├── package.json                 # root config (workspaces)
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml          # pnpm workspace config
-├── tsconfig.json
-├── .dockerignore                # Docker build exclusions
-├── README.md
-│
-├── apps/
-│   ├── backend/                 # Node.js hono backend
-│   │   ├── package.json
-│   │   ├── env.example
-│   │   ├── prisma/
-│   │   │   └── schema.prisma    # Prisma schema definition
-│   │   └── src/
-│   │       ├── index.ts         # app entrypoint
-│   │       ├── server.ts        # hono app + routes registration
-│   │       ├── routes/
-│   │       │   ├── games.ts
-│   │       │   ├── agents.ts
-│   │       │   ├── rounds.ts
-│   │       │   └── analytics.ts
-│   │       ├── services/
-│   │       │   ├── simulation_service.ts
-│   │       │   ├── analytics_service.ts
-│   │       │   └── telegram_service.ts
-│   │       └── core/
-│   │           ├── db/
-│   │           │   ├── index.ts
-│   │           │   ├── prisma.ts
-│   │           │   ├── seed.ts
-│   │           │   └── repositories/
-│   │           │       ├── GameRepository.ts
-│   │           │       └── RoundRepository.ts
-│   │           └── simulation-engine/
-│   │               ├── index.ts
-│   │               ├── sandbox.ts
-│   │               ├── stats.ts
-│   │               └── models/
-│   │                   ├── Agent.ts
-│   │                   ├── AgentFactory.ts
-│   │                   └── Game.ts
-│   │
-│   ├── bot/                      # Telegram bot service
-│   │   ├── package.json
-│   │   ├── env.example
-│   │   └── src/
-│   │       ├── index.ts          # bot entrypoint
-│   │       ├── handlers/
-│   │       │   ├── starts.ts
-│   │       │   ├── decisions.ts
-│   │       │   ├── results.ts
-│   │       │   └── schedules.ts
-│   │       └── utils/
-│   │           ├── api_clients.ts
-│   │           └── keyboards.ts
-│   │
-│   ├── frontend/                 # React + Vite + Tailwind Mini App
-│   │   ├── package.json
-│   │   ├── index.html            # HTML entry point
-│   │   ├── vite.config.ts        # Vite config with API proxy
-│   │   ├── tsconfig.json         # TypeScript config
-│   │   ├── tailwind.config.js    # Tailwind CSS config
-│   │   ├── postcss.config.js     # PostCSS config
-│   │   └── src/
-│   │       ├── index.css         # Tailwind directives + utilities
-│   │       ├── main.tsx          # React entry point
-│   │       ├── app.tsx           # Main App component
-│   │       ├── components/
-│   │       │   ├── gameconfig_form.tsx
-│   │       │   ├── simulation_viz.tsx
-│   │       │   ├── agent_editor.tsx
-│   │       │   └── round_stats.tsx
-│   │       └── api/
-│   │           ├── client.ts
-│   │           ├── games.ts
-│   │           └── analytics.ts
-│   │
-│   └── shared/                   # Shared lib (types & utils)
-│       ├── package.json
-│       ├── index.ts
-│       └── src/
-│           ├── types/
-│           │   ├── game.ts
-│           │   ├── agent.ts
-│           │   └── round.ts
-│           └── utils/
-│               └── random.ts
-│
-└── docker/
-    ├── docker-compose.yaml       # All services orchestration
-    ├── backend_dockerfile        # Multi-stage Node.js build
-    ├── bot_dockerfile
-    ├── frontend_dockerfile       # Multi-stage Vite build + nginx
-    ├── nginx.conf                # SPA fallback + API proxy
-    ├── env.example
-    └── init.sql
+### Зачем это вам
 
-Docker Commands:
+- **Студенту-экономисту** — увидеть в реальном времени, как из эгоистичных решений рождается
+  колебательный равновесный паттерн вокруг capacity.
+- **Преподавателю** — готовая демонстрация для лекции по теории игр / поведенческой экономике.
+- **Любителю стратегий** — площадка, чтобы написать свою и посмотреть, обыграет ли она
+  адаптивного агента с обучением.
 
-# Setup
-cd docker
-cp env.example .env          
+---
 
-build/logs/stop
-docker-compose up -d
+## 🚀 Как пользоваться
 
+Откройте [el-farol.vercel.app](https://el-farol-f740yqh99-sarkibartierbittis-projects.vercel.app/) → вкладка **«Симуляция»**.
 
-docker-compose logs -f           # All services
-docker-compose logs -f backend   # Backend only
-docker-compose logs -f frontend  # Frontend only
-docker-compose logs -f postgres  # Database only
+### Шаг 1 — настройте бар
 
-docker-compose down
+| Поле                        | Что означает                                                  |
+|----------------------------|---------------------------------------------------------------|
+| Количество агентов          | Сколько потенциальных посетителей в пуле                      |
+| Capacity (% от общего кол-ва) | Порог переполненности (60% = классический сетап Артура)      |
+| Раунды                      | Длительность симуляции                                        |
 
-rebuild/restart/check status
-docker-compose up -d --build
+Полезность за раунд: **+1 за каждого посетителя при посещении ≤ capacity, иначе −1 за каждого**.
 
-docker-compose build --no-cache && docker-compose up -d
+### Шаг 2 — соберите состав агентов
 
-docker-compose down -v && docker-compose up -d --build
+Добавьте ряды, выберите тип каждого, укажите количество. Сумма должна равняться общему числу агентов.
+Иконка ⚙ справа от ряда открывает параметры конкретной стратегии (порог, окно памяти,
+скорость адаптации и т.д.).
 
+### Шаг 3 — (опционально) задайте динамику популяции
 
-docker-compose ps
+Нажмите **«Настроить»** в блоке *Динамика популяции*. В одном окне:
 
-# Db access
-docker exec -it el_farol_postgres psql -U elfarol -d elfarol
+- **Активная популяция** — старт / мин / макс одновременно активных агентов.
+- **Распределения прихода и ухода** — Пуассон / равномерное / экспоненциальное / гамма / биномиальное.
+- **Расписание** для каждого потока — стартовый и конечный раунд, длина fade-in и fade-out.
+- **Превью-график справа** — теоретическое среднее ± σ по раундам, обновляется на лету,
+  пока вы крутите параметры. Видно сразу, как будет выглядеть приток/отток до запуска симуляции.
 
+### Шаг 4 — запустите и наблюдайте
 
-PostgreSQL  5432          5434        localhost:5434        
-Backend     3000          3001     http://localhost:3001  
-Frontend    80 (nginx)    3002     http://localhost:3002  
+После старта обновляются три графика:
 
-Frontend nginx proxies /api/* requests to the backend container.
-Frontend Commands (Local Development):
+1. **Посещение от раунда** — с линией capacity.
+2. **Активная популяция и потоки** — кто пришёл, кто ушёл, сколько в баре сейчас.
+3. **Таблица статистики** — средняя посещаемость, σ, эффективность (доля от теоретического оптимума).
 
-# install dependencies and frontend stuff
+Кнопка **«Сброс»** возвращает к настройкам.
+
+### Кастомный агент
+
+Выберите тип ряда `custom`, нажмите ⚙ → откроется редактор кода. Кнопка **«Вставить пример»**
+подкладывает рабочий шаблон. Код исполняется в изолированном sandbox.
+
+```js
+// available variables: history (array of past attendances), capacity (number)
+function decide(history, capacity) {
+  const recent = history.slice(-5);
+  const avg = recent.reduce((a, b) => a + b, 0) / Math.max(recent.length, 1);
+  return avg < capacity; // true = go, false = stay home
+}
+```
+
+---
+
+## 🛠 Для разработчика
+
+### Стек
+
+- **Backend** — Hono (Node) + Prisma + PostgreSQL (Supabase). REST API + симуляционный движок.
+- **Frontend** — React 18 + Vite + Tailwind + Recharts.
+- **Bot** — grammY (Telegram), читает/пишет через тот же backend.
+- **Shared** — пакет с TypeScript-типами и SeededRandom, переиспользуется тремя сервисами.
+- **Deploy** — Vercel (frontend + backend через `api/[[...path]].ts`), Supabase (PostgreSQL),
+  Docker (backend + nginx) для on-prem.
+
+### Архитектура — нотация C4
+
+#### Уровень 1. System Context
+
+Кто взаимодействует с системой и через что.
+
+```mermaid
+graph TB
+    user[👤 Студент / исследователь]
+    tg_user[👥 Telegram-пользователь]
+
+    system[El Farol Platform<br/>симулятор + бот]
+
+    supabase[(Supabase<br/>PostgreSQL)]
+    tg[Telegram API]
+
+    user -->|открывает в браузере, настраивает<br/>симуляции, пишет агентов| system
+    tg_user -->|играет 1 раунд в день,<br/>смотрит результаты| system
+    system -->|читает/пишет игры,<br/>раунды, решения| supabase
+    system -->|опросы, рассылки| tg
+```
+
+#### Уровень 2. Containers
+
+Из чего собрана система.
+
+```mermaid
+graph TB
+    subgraph User
+        browser[Браузер<br/>React SPA]
+        tg_client[Telegram-клиент]
+    end
+
+    subgraph "El Farol Platform"
+        frontend[apps/frontend<br/>React 18 + Vite<br/>Tailwind + Recharts]
+        backend[apps/backend<br/>Hono + Prisma<br/>Simulation Engine]
+        bot[apps/bot<br/>grammY<br/>Telegram-handlers]
+        shared[(apps/shared<br/>типы, SeededRandom)]
+    end
+
+    db[(Supabase Postgres)]
+    tg[Telegram Bot API]
+
+    browser -->|REST /api/games, /api/rounds| backend
+    tg_client --> tg
+    tg --> bot
+    bot -->|REST| backend
+    backend --> db
+
+    frontend -.импортирует.-> shared
+    backend -.импортирует.-> shared
+    bot -.импортирует.-> shared
+```
+
+#### Уровень 3. Components — Backend
+
+Внутреннее устройство backend-контейнера.
+
+```mermaid
+graph LR
+    routes[Routes<br/>games / rounds / agents / analytics]
+
+    subgraph services
+        sim_svc[SimulationService]
+        analytics_svc[AnalyticsService]
+        telegram_svc[TelegramService]
+    end
+
+    subgraph "Simulation Engine"
+        game[Game model<br/>round loop, population dynamics]
+        agent[Agent + AgentFactory<br/>8 built-in strategies]
+        sandbox[Sandbox<br/>vm2 для custom-агентов]
+        stats[Stats<br/>aggregation]
+    end
+
+    subgraph "DB layer"
+        game_repo[GameRepository]
+        round_repo[RoundRepository]
+        prisma[Prisma Client]
+    end
+
+    routes --> sim_svc
+    routes --> analytics_svc
+    sim_svc --> game
+    game --> agent
+    agent --> sandbox
+    sim_svc --> stats
+    sim_svc --> game_repo
+    sim_svc --> round_repo
+    game_repo --> prisma
+    round_repo --> prisma
+```
+
+#### Уровень 3. Components — Frontend
+
+```mermaid
+graph LR
+    page_sim[SimulationPage]
+    controls[SimulationControls<br/>форма + ряды агентов]
+    pop_modal[PopulationDynamicsModal<br/>+ FlowPreviewChart]
+    custom_modal[CustomAgentModal<br/>редактор кода]
+
+    hook_sim[useSimulation<br/>polling + chart data]
+    api_games[api/games.ts<br/>REST client]
+
+    page_sim --> controls
+    controls --> pop_modal
+    controls --> custom_modal
+    page_sim --> hook_sim
+    hook_sim --> api_games
+    api_games -->|fetch /api/games| backend[Backend API]
+```
+
+### Схема данных (Prisma)
+
+```
+Game ──< GameAgent >── Agent
+  │           │
+  │           └──< Decision >── Round
+  └──< Round
+```
+
+Ключевые таблицы: `games`, `agents`, `game_agents` (M:N + per-game статистика),
+`rounds`, `decisions`. JSON-поля: `Game.benefit_rules`, `Game.population_dynamics`
+(включая `schedule` каждого потока). Полный схема-файл — [apps/backend/prisma/schema.prisma](apps/backend/prisma/schema.prisma).
+
+### Симуляционный движок: что считается за раунд
+
+1. `updateActivePopulation()` — sample прихода и ухода из заданных распределений,
+   с применением schedule-scale (`computeScheduleScale(round, schedule)`).
+2. Для каждого активного агента `agent.predict(history, capacity)` → `boolean`.
+   Custom-агенты исполняются в `vm2`-sandbox.
+3. `attendance = Σ decisions`, `benefit = attendance ≤ capacity ? attendance : -attendance`.
+4. История пишется в память, периодически сбрасывается в Postgres через `RoundRepository`.
+
+Все случайности идут через `SeededRandom(id)` — игры воспроизводимы по id.
+
+### Локальный запуск
+
+```bash
 pnpm install
+pnpm --filter @el-farol/shared build      # компилируем shared в lib/
+cp apps/backend/env.example apps/backend/.env  # выставить DATABASE_URL
 
+# применить схему
+pnpm db:push
 
-pnpm dev:frontend
+# параллельно
+pnpm dev:backend   # hono на :3001
+pnpm dev:frontend  # vite на :5173
+```
 
-cd apps/frontend && pnpm dev
+Docker:
 
+```bash
+docker compose up -d   # backend + frontend(nginx) + postgres
+```
 
-pnpm build:frontend
+Скрипты в [package.json](package.json), Dockerfiles — в [docker/](docker/).
 
+### Структура репозитория
 
-cd apps/frontend && pnpm preview
+```
+apps/
+  backend/      Hono API + Prisma + simulation engine
+    prisma/    schema.prisma, init.sql, migrations/
+    src/       routes/, services/, core/{db,simulation-engine}/
+  frontend/    React + Vite UI
+    src/       pages/, components/, hooks/, api/, types/
+  bot/         Telegram bot (grammY)
+  shared/      типы + SeededRandom (импортируется всеми)
 
-cd apps/frontend && pnpm type-check
+analysis/      Python-скрипты офлайн-анализа сценариев
+docker/        Dockerfiles + nginx.conf
+api/           Vercel serverless entry для backend
+```
 
-##############################################################
-Running the Simulation Engine (API, curl examples):
+### Деплой
 
-The simulation engine runs inside the backend container. You drive it via the REST API.
-Replace localhost:3001 with localhost:3000 if running the backend locally (pnpm dev:backend).
+- **Vercel** — фронт собирается из `apps/frontend`, backend проксируется через
+  [api/[[...path]].ts](api/%5B%5B...path%5D%5D.ts) как serverless-функция.
+- **Supabase** — Postgres. Применить [apps/backend/prisma/init.sql](apps/backend/prisma/init.sql)
+  один раз; миграции — в [apps/backend/prisma/migrations/](apps/backend/prisma/migrations/).
 
-# 1. Create a game
-curl -X POST http://localhost:3001/games \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Saturday Night",
-    "config": {
-      "capacity": 60,
-      "numAgents": 100,
-      "numRounds": 50
-    }
-  }'
-# Response includes "id": "<GAME_ID>"  -- save it for the next steps.
+### Вклад
 
-# 2. Add agents to the game (batch)
-#    builtInType options: "random", "threshold", "moving_average", "adaptive"
-curl -X POST http://localhost:3001/games/<GAME_ID>/agents/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agents": [
-      { "name": "Random 1",  "type": "built_in", "builtInType": "random" },
-      { "name": "Random 2",  "type": "built_in", "builtInType": "random" },
-      { "name": "Thresh 1",  "type": "built_in", "builtInType": "threshold",      "parameters": { "threshold": 0.6, "goProbability": 0.8 } },
-      { "name": "MA 1",      "type": "built_in", "builtInType": "moving_average", "parameters": { "windowSize": 5, "threshold": 0.6 } },
-      { "name": "Adaptive 1","type": "built_in", "builtInType": "adaptive",       "parameters": { "initialThreshold": 0.6, "adaptationRate": 0.1 } }
-    ]
-  }'
+Ветки `feature/*`, PR в `main`. Type-check обязателен:
 
-# 3a. Run the entire simulation at once (all configured rounds)
-curl -X POST http://localhost:3001/games/<GAME_ID>/simulate \
-  -H "Content-Type: application/json" \
-  -d '{}'
-# Or run a specific number of rounds:  -d '{ "rounds": 20 }'
+```bash
+pnpm --filter @el-farol/backend type-check
+pnpm --filter @el-farol/frontend type-check
+```
 
-# 3b. Or step through one round at a time
-#     First start the game:
-curl -X PATCH http://localhost:3001/games/<GAME_ID>/status \
-  -H "Content-Type: application/json" \
-  -d '{ "status": "start" }'
-#     Then advance one round:
-curl -X POST http://localhost:3001/games/<GAME_ID>/rounds
-
-# 4. Inspect results
-curl http://localhost:3001/games/<GAME_ID>          # full game state
-curl http://localhost:3001/games/<GAME_ID>/stats     # aggregated statistics
-curl http://localhost:3001/rounds?gameId=<GAME_ID>   # round-by-round data
-
-# Other useful endpoints
-curl http://localhost:3001/games                     # list all games
-curl http://localhost:3001/health                    # backend health check
-
-##########################################################################################################################################################
-Vercel Deployment:
-
-1. Set up a PostgreSQL database (e.g. Neon, Supabase, Vercel Postgres).
-2. Add DATABASE_URL in Vercel (or connect Supabase via Vercel integration—it sets POSTGRES_PRISMA_URL, which we use automatically).
-3. Create tables (once): open a terminal on your machine, cd to this project, then run:
-   DATABASE_URL="postgresql://postgres.XXX:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require" pnpm db:push
-   (Replace XXX with your Supabase project ref, PASSWORD with your DB password. Or copy POSTGRES_PRISMA_URL from Vercel env vars.)
-4. Deploy:
-   ./scripts/deploy.sh          # preview
-   ./scripts/deploy.sh --prod   # production
-
-The frontend is served from apps/frontend/dist; the API runs as Vercel serverless at /api/*.
-
-##########################################################################################################################################################
-Access Points Summary:
-
-Environment Frontend Backend API  Notes                              
-
- Local Dev    http://localhost:5173  http://localhost:3001  Vite proxies /api to backend       
- Docker       http://localhost:3002  http://localhost:3001  nginx proxies /api to backend      
-
-
-
-Frontend:
-- React 18 + TypeScript
-- Vite 6 (with SWC)
-- Tailwind CSS 3
-- nginx (production)
-
-Backend:
-- Node.js 22 + Hono
-- Prisma ORM
-- PostgreSQL 16
-
-Build Tools:
-- pnpm workspaces
-- Docker multi-stage builds
-
-
-
-
-
-References/Similar projects:
-https://github.com/kennardmah/minority-game-theory-and-mechanism // An insightful exploration into the El Farol Bar problem through the lens of minority games, including single-shot static games, repeated static games, and repeated inductive games, culminating in a comprehensive final report.
-
-https://eduardo-zambrano.github.io/documents/compufinal.pdf
-
-https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://direct.mit.edu/isal/proceedings-pdf/isal2020/32/558/1908592/isal_a_00339.pdf&ved=2ahUKEwj8sf_guNOQAxW3HRAIHRiqGwU4FBAWegQIFRAB&usg=AOvVaw1IUSmzGA6rCjhnz19VpkYw //We take a unique approach to analyzing the problem by focusing on how the distribution of utilized strategies shifts over time
+Не коммитьте `apps/*/src/**/*.js|.d.ts` — это артефакты компилятора, .gitignore их ловит.
