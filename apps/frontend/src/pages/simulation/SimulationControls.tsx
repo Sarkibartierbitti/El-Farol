@@ -58,8 +58,6 @@ type SimulationFormInputValues = {
   numAgents: string;
   capacityPercent: string;
   numRounds: string;
-  positiveMultiplier: string;
-  negativeMultiplier: string;
 };
 
 const defaultFormInputs: SimulationFormInputValues = {
@@ -67,8 +65,6 @@ const defaultFormInputs: SimulationFormInputValues = {
   numAgents: String(defaultForm.numAgents),
   capacityPercent: String(defaultForm.capacityPercent),
   numRounds: String(defaultForm.numRounds),
-  positiveMultiplier: String(defaultForm.positiveMultiplier),
-  negativeMultiplier: String(defaultForm.negativeMultiplier),
 };
 
 const defaultAgents: AgentBatchEntry[] = [
@@ -435,8 +431,6 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
   const parsedNumAgents = parseIntegerInput(formInputs.numAgents, 2, 1000);
   const parsedCapacityPercent = parseIntegerInput(formInputs.capacityPercent, 1, 99);
   const parsedNumRounds = parseIntegerInput(formInputs.numRounds, 1, 1000);
-  const parsedPositiveMultiplier = parseDecimalInput(formInputs.positiveMultiplier, 0);
-  const parsedNegativeMultiplier = parseDecimalInput(formInputs.negativeMultiplier, 0);
 
   const parsedAgentCounts = agentCountInputs.map((raw) => parseIntegerInput(raw, 0, parsedNumAgents ?? 1000));
   const totalAgents = parsedAgentCounts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
@@ -451,8 +445,6 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
     parsedNumAgents === null ||
     parsedCapacityPercent === null ||
     parsedNumRounds === null ||
-    parsedPositiveMultiplier === null ||
-    parsedNegativeMultiplier === null ||
     parsedAgentCounts.some((count) => count === null);
 
   const hasEmptyInputs = hasEmptyFormInput || hasEmptyAgentCountInput;
@@ -469,9 +461,7 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
       !canSubmit ||
       parsedNumAgents === null ||
       parsedCapacityPercent === null ||
-      parsedNumRounds === null ||
-      parsedPositiveMultiplier === null ||
-      parsedNegativeMultiplier === null
+      parsedNumRounds === null
     ) {
       return;
     }
@@ -487,8 +477,8 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
         numAgents: parsedNumAgents,
         capacityPercent: parsedCapacityPercent,
         numRounds: parsedNumRounds,
-        positiveMultiplier: parsedPositiveMultiplier,
-        negativeMultiplier: parsedNegativeMultiplier,
+        positiveMultiplier: 1,
+        negativeMultiplier: 1,
         populationDynamics: normalizedPopulationDynamics,
       },
       normalizedAgents,
@@ -554,26 +544,8 @@ export function SimulationControls({ status, onRun, onReset }: SimulationControl
         <section className="min-w-0">
           <h3 className="mb-3 break-words text-xs font-bold">Правила поощерения агентов</h3>
           <p className="mb-3 break-words text-xs text-black-400">
-            Полезность = посещение * мультипликатор (положительный, если посещение ниже capacity, иначе отрицательный)
+            Полезность: +1 за каждого посетителя при посещении ≤ capacity, иначе −1 за каждого.
           </p>
-          <div className="grid min-w-0 grid-cols-2 gap-3 [&>div]:min-w-0">
-            <Input
-              label="+ мульт"
-              type="text"
-              inputMode="decimal"
-              value={formInputs.positiveMultiplier}
-              onChange={(event) => setFormInput('positiveMultiplier', sanitizeDecimalInput(event.target.value))}
-              disabled={isRunning}
-            />
-            <Input
-              label="− мульт"
-              type="text"
-              inputMode="decimal"
-              value={formInputs.negativeMultiplier}
-              onChange={(event) => setFormInput('negativeMultiplier', sanitizeDecimalInput(event.target.value))}
-              disabled={isRunning}
-            />
-          </div>
         </section>
 
         <section className="min-w-0">

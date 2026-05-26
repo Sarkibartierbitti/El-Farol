@@ -24,7 +24,6 @@ type PopulationDraftState = {
   initialActiveAgents: string;
   minActiveAgents: string;
   maxActiveAgents: string;
-  utilitySensitivity: string;
   arrivalDistribution: PopulationArrivalDistribution;
   arrivalMean: string;
   arrivalMin: string;
@@ -112,7 +111,6 @@ function createDraft(value: PopulationDynamicsConfig): PopulationDraftState {
     initialActiveAgents: String(value.initialActiveAgents),
     minActiveAgents: String(value.minActiveAgents),
     maxActiveAgents: String(value.maxActiveAgents),
-    utilitySensitivity: String(value.utilitySensitivity),
     arrivalDistribution: value.arrivals.distribution,
     arrivalMean: String(value.arrivals.mean ?? 0),
     arrivalMin: String(value.arrivals.min ?? 0),
@@ -209,7 +207,7 @@ export function normalizePopulationDynamicsConfig(
     initialActiveAgents,
     minActiveAgents,
     maxActiveAgents,
-    utilitySensitivity: Math.max(0, value.utilitySensitivity),
+    utilitySensitivity: 0,
     arrivals,
     departures,
   };
@@ -299,7 +297,7 @@ export function PopulationDynamicsModal({
         initialActiveAgents: parseInteger(draft.initialActiveAgents, 0, totalAgents) ?? value.initialActiveAgents,
         minActiveAgents: parseInteger(draft.minActiveAgents, 0, totalAgents) ?? value.minActiveAgents,
         maxActiveAgents: parseInteger(draft.maxActiveAgents, 0, totalAgents) ?? value.maxActiveAgents,
-        utilitySensitivity: parseDecimal(draft.utilitySensitivity, 0) ?? value.utilitySensitivity,
+        utilitySensitivity: 0,
         arrivals: {
           distribution: draft.arrivalDistribution,
           mean: parseDecimal(draft.arrivalMean, 0) ?? value.arrivals.mean,
@@ -340,15 +338,13 @@ export function PopulationDynamicsModal({
     const initialActiveAgents = parseInteger(draft.initialActiveAgents, 0, totalAgents);
     const minActiveAgents = parseInteger(draft.minActiveAgents, 0, totalAgents);
     const maxActiveAgents = parseInteger(draft.maxActiveAgents, 0, totalAgents);
-    const utilitySensitivity = parseDecimal(draft.utilitySensitivity, 0);
 
     if (
       initialActiveAgents === null ||
       minActiveAgents === null ||
-      maxActiveAgents === null ||
-      utilitySensitivity === null
+      maxActiveAgents === null
     ) {
-      setError('Поля популяции и чувствительности должны быть заполнены.');
+      setError('Поля популяции должны быть заполнены.');
       return;
     }
 
@@ -464,7 +460,7 @@ export function PopulationDynamicsModal({
       initialActiveAgents,
       minActiveAgents,
       maxActiveAgents,
-      utilitySensitivity,
+      utilitySensitivity: 0,
       arrivals: arrivalConfig,
       departures: departureConfig,
     }, totalAgents));
@@ -549,15 +545,6 @@ export function PopulationDynamicsModal({
                   value={draft.maxActiveAgents}
                   onChange={(event) => updateDraft('maxActiveAgents', sanitizeIntegerInput(event.target.value))}
                   disabled={disabled}
-                />
-                <Input
-                  label="Чувствительность к полезности"
-                  type="text"
-                  inputMode="decimal"
-                  value={draft.utilitySensitivity}
-                  onChange={(event) => updateDraft('utilitySensitivity', sanitizeDecimalInput(event.target.value))}
-                  disabled={disabled}
-                  hint="0 = полностью внешняя динамика."
                 />
               </div>
             </div>
@@ -756,7 +743,6 @@ export function PopulationDynamicsModal({
             <div className="border border-black-100 bg-white p-4 text-sm text-black-700">
               <p className="font-medium text-black-900">Сводка</p>
               <p className="mt-2">Активные агенты: старт {normalizedPreview.initialActiveAgents}, диапазон {normalizedPreview.minActiveAgents}-{normalizedPreview.maxActiveAgents}.</p>
-              <p className="mt-2">При хорошем результате приток растет, а отток падает; при плохом результате наоборот. Сила эффекта задается параметром чувствительности.</p>
             </div>
           </div>
           </div>
