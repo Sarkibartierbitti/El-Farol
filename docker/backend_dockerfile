@@ -10,6 +10,8 @@ WORKDIR /app
 # dependencies & configs=========================================
 FROM base AS deps
 
+
+# track high end files for caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/backend/prisma ./apps/backend/prisma
@@ -63,6 +65,8 @@ COPY --from=builder /app/pnpm-workspace.yaml ./
 
 RUN chown -R hono:nodejs /app
 
+
+# containerization best practce
 USER hono
 
 WORKDIR /app/apps/backend

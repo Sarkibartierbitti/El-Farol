@@ -1,4 +1,5 @@
-import { StrictMode } from 'react'
+import { StrictMode } from 'react' //re-run comps for dev mode
+
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './app'

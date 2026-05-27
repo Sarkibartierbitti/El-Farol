@@ -76,6 +76,7 @@ function toGameResponse(source: Game | PrismaGameWithCount): GameResponse {
 
 //convert shared GameStatus to Prisma GameStatus
 function toPrismaStatus(status: GameStatus): PrismaGameStatus {
+  // keys from gamestatus, values of prismagamestatus
   const map: Record<GameStatus, PrismaGameStatus> = {
     [GameStatus.DRAFT]: PrismaGameStatus.DRAFT,
     [GameStatus.RUNNING]: PrismaGameStatus.RUNNING,
