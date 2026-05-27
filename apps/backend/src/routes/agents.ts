@@ -67,7 +67,7 @@ agentsRouter.post('/games/:gameId/agents', async (c: Context) => {
       data: {
         id: agent.getId(),
         name: agent.getName(),
-        type: PrismaAgentType.DRAFT, // Using DRAFT as placeholder for agent type
+        type: body.customCode ? PrismaAgentType.CUSTOM : PrismaAgentType.BUILT_IN,
         builtInType: toPrismaBuiltInType(body.builtInType),
         customCode: body.customCode,
         config: body.parameters as object | undefined,
