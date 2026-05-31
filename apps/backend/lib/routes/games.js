@@ -55,6 +55,7 @@ function toGameResponse(source) {
 }
 //convert shared GameStatus to Prisma GameStatus
 function toPrismaStatus(status) {
+    // keys from gamestatus, values of prismagamestatus
     const map = {
         [shared_1.GameStatus.DRAFT]: client_1.GameStatus.DRAFT,
         [shared_1.GameStatus.RUNNING]: client_1.GameStatus.RUNNING,

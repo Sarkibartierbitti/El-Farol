@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Game = void 0;
 const shared_1 = require("@el-farol/shared");
 const uuid_1 = require("uuid");
-// game model - manages game state and round execution
+// game model, manages game state and round execution
 class Game {
-    id;
+    id; //constant
     name;
     description;
     config;
@@ -168,6 +168,7 @@ class Game {
             numAgents: this.config.numAgents,
         };
     }
+    //helper to get number to boundary
     clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
     }
@@ -183,7 +184,7 @@ class Game {
             initialActiveAgents,
             minActiveAgents,
             maxActiveAgents,
-            utilitySensitivity: Math.max(0, this.config.populationDynamics.utilitySensitivity ?? 0),
+            utilitySensitivity: 0,
         };
     }
     getInitialActiveAgents() {
@@ -261,46 +262,66 @@ class Game {
         }
         return count;
     }
-    getUtilitySignal(activeAgents) {
-        if (this.benefitHistory.length === 0) {
+    // schedule scale factor for current round. returns 1 if no schedule.
+    // fade window uses (fade + 1 - distance) / (fade + 1) ramp, so no fade round is wasted at 0.
+    computeScheduleScale(round, schedule) {
+        if (!schedule) {
+            return 1;
+        }
+        const start = Math.max(1, Math.floor(schedule.startRound ?? 1));
+        const end = schedule.endRound != null ? Math.floor(schedule.endRound) : null;
+        const fadeIn = Math.max(0, Math.floor(schedule.fadeInRounds ?? 0));
+        const fadeOut = Math.max(0, Math.floor(schedule.fadeOutRounds ?? 0));
+        if (round < start) {
+            const distance = start - round;
+            if (distance > fadeIn) {
+                return 0;
+            }
+            return (fadeIn + 1 - distance) / (fadeIn + 1);
+        }
+        if (end != null && round > end) {
+            const distance = round - end;
+            if (distance > fadeOut) {
+                return 0;
+            }
+            return (fadeOut + 1 - distance) / (fadeOut + 1);
+        }
+        return 1;
+    }
+    samplePopulationFlow(config, limit, activeAgents) {
+        if (limit <= 0) {
             return 0;
         }
-        const lastBenefit = this.benefitHistory[this.benefitHistory.length - 1] ?? 0;
-        const positiveMultiplier = Math.max(0, this.config.benefitRules?.positiveMultiplier ?? 1);
-        const negativeMultiplier = Math.max(0, this.config.benefitRules?.negativeMultiplier ?? 1);
-        const reference = Math.max(this.config.capacity * Math.max(positiveMultiplier, 1), activeAgents * Math.max(negativeMultiplier, 1), 1);
-        return this.clamp(lastBenefit / reference, -1, 1);
-    }
-    samplePopulationFlow(config, limit, utilityFactor, activeAgents) {
-        if (limit <= 0) {
+        const combinedFactor = this.computeScheduleScale(this.currentRound, config.schedule);
+        if (combinedFactor <= 0) {
             return 0;
         }
         let sampledCount = 0;
         switch (config.distribution) {
             case 'poisson':
-                sampledCount = this.samplePoisson((config.mean ?? 0) * utilityFactor);
+                sampledCount = this.samplePoisson((config.mean ?? 0) * combinedFactor);
                 break;
             case 'uniform': {
                 const min = Math.max(0, Math.floor(config.min ?? 0));
                 const max = Math.max(min, Math.floor(config.max ?? limit));
-                sampledCount = Math.floor(this.random.randFloat(min, max + 1) * utilityFactor);
+                sampledCount = Math.floor(this.random.randFloat(min, max + 1) * combinedFactor);
                 break;
             }
             case 'exponential': {
                 const mean = Math.max(0, config.mean ?? 0);
                 const sample = -Math.log(Math.max(1 - this.random.random(), 1e-12)) * mean;
-                sampledCount = Math.floor(sample * utilityFactor);
+                sampledCount = Math.floor(sample * combinedFactor);
                 break;
             }
             case 'gamma': {
                 const mean = Math.max(0, config.mean ?? 0);
                 const shape = Math.max(0.1, config.shape ?? 2);
                 const scale = mean > 0 ? mean / shape : 0;
-                sampledCount = Math.floor(this.sampleGamma(shape, scale) * utilityFactor);
+                sampledCount = Math.floor(this.sampleGamma(shape, scale) * combinedFactor);
                 break;
             }
             case 'binomial': {
-                const probability = this.clamp((config.probability ?? 0) * utilityFactor, 0, 1);
+                const probability = this.clamp((config.probability ?? 0) * combinedFactor, 0, 1);
                 sampledCount = this.sampleBinomial(activeAgents, probability);
                 break;
             }
@@ -321,19 +342,15 @@ class Game {
             };
         }
         const activeAgentsStart = this.activeAgentIds.size;
-        const utilitySignal = this.getUtilitySignal(activeAgentsStart);
-        const utilitySensitivity = dynamics.utilitySensitivity ?? 0;
-        const arrivalFactor = this.clamp(1 + (utilitySensitivity * utilitySignal), 0.1, 3);
-        const departureFactor = this.clamp(1 - (utilitySensitivity * utilitySignal), 0, 3);
         const maxDepartures = Math.max(0, activeAgentsStart - (dynamics.minActiveAgents ?? 0));
-        const departures = this.samplePopulationFlow(dynamics.departures, maxDepartures, departureFactor, activeAgentsStart);
+        const departures = this.samplePopulationFlow(dynamics.departures, maxDepartures, activeAgentsStart);
         const departingAgents = this.random.sample(this.getActiveAgents(), departures);
         for (const agent of departingAgents) {
             this.activeAgentIds.delete(agent.getId());
         }
         const afterDepartures = this.activeAgentIds.size;
         const maxArrivals = Math.max(0, Math.min(this.getInactiveAgents().length, (dynamics.maxActiveAgents ?? this.agents.length) - afterDepartures));
-        const arrivals = this.samplePopulationFlow(dynamics.arrivals, maxArrivals, arrivalFactor, afterDepartures);
+        const arrivals = this.samplePopulationFlow(dynamics.arrivals, maxArrivals, afterDepartures);
         const arrivingAgents = this.random.sample(this.getInactiveAgents(), arrivals);
         for (const agent of arrivingAgents) {
             this.activeAgentIds.add(agent.getId());
@@ -345,35 +362,13 @@ class Game {
             departures,
         };
     }
-    getAgentBehaviorContext() {
-        const positiveMultiplier = Math.max(0, this.config.benefitRules?.positiveMultiplier ?? 1);
-        const negativeMultiplier = Math.max(0, this.config.benefitRules?.negativeMultiplier ?? 1);
-        const positiveSafe = Math.max(positiveMultiplier, 0.001);
-        const negativeSafe = Math.max(negativeMultiplier, 0.001);
-        const utilityRatioLog = Math.log(negativeSafe / positiveSafe);
-        const cautionShift = Math.tanh(utilityRatioLog);
-        const effectiveCapacity = this.clamp(this.config.capacity * (1 - (0.2 * cautionShift)), 1, this.config.numAgents);
-        return {
-            positiveMultiplier,
-            negativeMultiplier,
-            effectiveCapacity,
-            utilityGoBias: this.clamp(positiveSafe / (positiveSafe + negativeSafe), 0.1, 0.9),
-            cautionFactor: this.clamp(Math.sqrt(negativeSafe / positiveSafe), 0.5, 2),
-            rewardFactor: this.clamp(Math.sqrt(positiveSafe / negativeSafe), 0.5, 2),
-        };
-    }
-    // check benefit for one round
+    // benefit: +1 per attendee under capacity, -1 per attendee over
     calculateBenefit(attendance) {
         const rules = this.config.benefitRules;
         if (rules?.customFormula) {
             return rules.customFormula(attendance, this.config.capacity);
         }
-        const positiveMultiplier = rules?.positiveMultiplier ?? 1;
-        const negativeMultiplier = rules?.negativeMultiplier ?? 1;
-        if (attendance <= this.config.capacity) {
-            return attendance * positiveMultiplier;
-        }
-        return -attendance * negativeMultiplier;
+        return attendance <= this.config.capacity ? attendance : -attendance;
     }
     // execute a single round
     executeRound() {
@@ -391,11 +386,10 @@ class Game {
         const history = this.attendanceHistory;
         const populationSnapshot = this.updateActivePopulation();
         const activeAgents = this.getActiveAgents();
-        const behaviorContext = this.getAgentBehaviorContext();
         const decisions = [];
         let attendance = 0;
         for (const agent of activeAgents) {
-            const decision = agent.predict(history, this.config.capacity, behaviorContext);
+            const decision = agent.predict(history, this.config.capacity);
             if (decision) {
                 attendance += 1;
             }

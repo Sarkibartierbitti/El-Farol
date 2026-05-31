@@ -63,7 +63,7 @@ agentsRouter.post('/games/:gameId/agents', async (c) => {
             data: {
                 id: agent.getId(),
                 name: agent.getName(),
-                type: client_1.AgentType.DRAFT, // Using DRAFT as placeholder for agent type
+                type: body.customCode ? client_1.AgentType.CUSTOM : client_1.AgentType.BUILT_IN,
                 builtInType: toPrismaBuiltInType(body.builtInType),
                 customCode: body.customCode,
                 config: body.parameters,

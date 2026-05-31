@@ -80,11 +80,18 @@ export class AgentSandbox {
       });
 
       try {
+        // run user code, then resolve a decision in priority order:
+        //   1. variable `decision` was assigned
+        //   2. function `decide(history, capacity)` was defined → invoke it
+        //   3. fall through to expression-style evaluation below
         const statementWrapper = `
           (function() {
             ${code}
             if (typeof decision !== 'undefined') {
               return Boolean(decision);
+            }
+            if (typeof decide === 'function') {
+              return Boolean(decide(history, capacity));
             }
             return undefined;
           })()

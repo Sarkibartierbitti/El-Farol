@@ -293,7 +293,11 @@ function AgentSettingsModal({
                 В коде доступны `history`, `capacity`, `roundNumber`, `helpers.average`, `helpers.sum`,
                 `helpers.min`, `helpers.max`, `helpers.last` и `Math`.
               </p>
-              <p className="mt-1">Код должен вернуть булево значение или записать его в переменную `decision`.</p>
+              <p className="mt-1">
+                Решение определяется одним из трёх способов (в этом порядке):
+                присвоить переменную `decision`, объявить функцию `decide(history, capacity)` —
+                она будет вызвана автоматически, либо вернуть значение из inline-выражения.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1">
