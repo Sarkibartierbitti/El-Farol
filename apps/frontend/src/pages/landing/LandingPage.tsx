@@ -102,6 +102,17 @@ export function LandingPage() {
           <Button size="lg">Запустить симуляцию →</Button>
         </Link>
       </div>
+      <p className="mt-6 text-sm text-gray-600">
+        Подробнее узнать о интерфейсе с разбором кейсов:{' '}
+        <a
+          href="https://docs.google.com/document/d/1jj2XbjgDWktwumEO_abatgWNp9iHsPnh04Mz1chECtk/edit?tab=t.0"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#9871f7] hover:underline"
+        >
+          Google Docs
+        </a>
+      </p>
     </div>
 
   );
