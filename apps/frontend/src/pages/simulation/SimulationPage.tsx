@@ -249,7 +249,7 @@ export function SimulationPage() {
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar yAxisId="flow" dataKey="arrivals" name="Пришли" fill="#f4bb73" />
-                    <Bar yAxisId="flow" dataKey="departures" name="Ушли" fill="#d97706" />
+                    <Bar yAxisId="flow" dataKey="departures" name="Ушли" fill="#9871f7" />
                     <Line
                       yAxisId="population"
                       type="monotone"
