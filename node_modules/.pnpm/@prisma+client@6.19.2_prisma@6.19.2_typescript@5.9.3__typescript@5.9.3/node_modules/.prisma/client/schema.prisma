@@ -24,11 +24,9 @@ enum GameStatus {
 }
 
 enum AgentType {
-  DRAFT
-  RUNNING
-  PAUSED
-  COMPLETED
-  CANCELLED
+  BUILT_IN
+  CUSTOM
+  HUMAN
 }
 
 enum BuiltInAgentType {
