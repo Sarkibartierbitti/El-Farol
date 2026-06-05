@@ -20,6 +20,7 @@ export interface BuiltInAgentPreset {
   label: string;
   summary: string;
   formula: string;
+  formulaTex: string;
   parameters: AgentParameterField[];
 }
 
@@ -64,6 +65,7 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     label: 'Random',
     summary: 'Каждый раунд принимает случайное решение без учета истории.',
     formula: 'P(go) = 0.5.',
+    formulaTex: 'P(\\mathrm{go}) = 0.5.',
     parameters: [],
   },
   [BuiltInAgentType.THRESHOLD]: {
@@ -72,6 +74,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Сравнивает среднюю историческую посещаемость с порогом и затем идет с фиксированной вероятностью.',
     formula:
       'x_t = mean(history) / capacity; если x_t < threshold, то P(go) = goProbability, иначе P(go) = 1 - goProbability.',
+    formulaTex:
+      'x_t = \\mathrm{mean}(\\mathrm{history}) / \\mathrm{capacity};\\ \\text{если } x_t < \\mathrm{threshold}, \\text{ то } P(\\mathrm{go}) = \\mathrm{goProbability}, \\text{ иначе } P(\\mathrm{go}) = 1 - \\mathrm{goProbability}.',
     parameters: [
       {
         key: 'threshold',
@@ -99,6 +103,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Смотрит только на последние несколько раундов и сравнивает среднее с порогом.',
     formula:
       'm_t = mean(last windowSize attendances) / capacity; P(go) = 1, если m_t < threshold, иначе 0.',
+    formulaTex:
+      'm_t = \\mathrm{mean}(\\mathrm{last}\\ \\mathrm{windowSize}\\ \\mathrm{attendances}) / \\mathrm{capacity};\\ P(\\mathrm{go}) = 1, \\text{ если } m_t < \\mathrm{threshold}, \\text{ иначе } 0.',
     parameters: [
       {
         key: 'windowSize',
@@ -126,7 +132,9 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     label: 'Adaptive',
     summary: 'Хранит собственный порог и сдвигает его после неудачных решений.',
     formula:
-      'P(go) = 1, если mean(history) / capacity < currentThreshold; после плохого go currentThreshold += adaptationRate, после плохого stay currentThreshold -= adaptationRate.',
+      'P(go) = 1, если mean(history) / capacity < currentThreshold; после плохого go currentThreshold -= adaptationRate, после плохого stay currentThreshold += adaptationRate.',
+    formulaTex:
+      'P(\\mathrm{go}) = 1, \\text{ если } \\mathrm{mean}(\\mathrm{history}) / \\mathrm{capacity} < \\mathrm{currentThreshold};\\ \\text{после плохого go } \\mathrm{currentThreshold} -= \\mathrm{adaptationRate}, \\text{ после плохого stay } \\mathrm{currentThreshold} += \\mathrm{adaptationRate}.',
     parameters: [
       {
         key: 'initialThreshold',
@@ -154,6 +162,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Идет тогда, когда последние несколько раз бар был переполнен.',
     formula:
       'c_t = mean(last lookback attendances); P(go) = 1, если c_t >= capacity, иначе 0.',
+    formulaTex:
+      'c_t = \\mathrm{mean}(\\mathrm{last}\\ \\mathrm{lookback}\\ \\mathrm{attendances});\\ P(\\mathrm{go}) = 1, \\text{ если } c_t \\ge \\mathrm{capacity}, \\text{ иначе } 0.',
     parameters: [
       {
         key: 'lookback',
@@ -173,6 +183,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Экстраполирует линейный тренд последних посещений на один шаг вперед.',
     formula:
       'trend_t = mean(diff(last windowSize attendances)); predicted_t = lastAttendance + trend_t; P(go) = 1, если predicted_t < capacity, иначе 0.',
+    formulaTex:
+      '\\mathrm{trend}_t = \\mathrm{mean}(\\mathrm{diff}(\\mathrm{last}\\ \\mathrm{windowSize}\\ \\mathrm{attendances}));\\ \\mathrm{predicted}_t = \\mathrm{lastAttendance} + \\mathrm{trend}_t;\\ P(\\mathrm{go}) = 1, \\text{ если } \\mathrm{predicted}_t < \\mathrm{capacity}, \\text{ иначе } 0.',
     parameters: [
       {
         key: 'windowSize',
@@ -192,6 +204,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Следует фиксированному циклу из раундов посещения и пропуска.',
     formula:
       'cycle = onRounds + offRounds; P(go) = 1, если (roundCounter mod cycle) < onRounds, иначе 0.',
+    formulaTex:
+      '\\mathrm{cycle} = \\mathrm{onRounds} + \\mathrm{offRounds};\\ P(\\mathrm{go}) = 1, \\text{ если } (\\mathrm{roundCounter}\\ \\mathrm{mod}\\ \\mathrm{cycle}) < \\mathrm{onRounds}, \\text{ иначе } 0.',
     parameters: [
       {
         key: 'onRounds',
@@ -221,6 +235,8 @@ const BUILT_IN_AGENT_PRESETS: Record<BuiltInAgentType, BuiltInAgentPreset> = {
     summary: 'Оценивает вероятность пойти с учетом своего опыта ошибок.',
     formula:
       'Если прошлый go был плохим, goRegret += learningRate; если прошлый stay был плохим, stayRegret += learningRate; P(go) = 0.5 при нулевом сожалении, иначе stayRegret / (goRegret + stayRegret).',
+    formulaTex:
+      '\\text{Если прошлый go был плохим, } \\mathrm{goRegret} += \\mathrm{learningRate};\\ \\text{если прошлый stay был плохим, } \\mathrm{stayRegret} += \\mathrm{learningRate};\\ P(\\mathrm{go}) = 0.5 \\text{ при нулевом сожалении, иначе } \\mathrm{stayRegret} / (\\mathrm{goRegret} + \\mathrm{stayRegret}).',
     parameters: [
       {
         key: 'learningRate',
